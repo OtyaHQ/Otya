@@ -8,6 +8,11 @@ use std::process;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const BYTECODE_HEADER: &str = "OTBC 1";
+const MAX_SOURCE_BYTES: usize = 1_048_576;
+const MAX_BYTECODE_BYTES: usize = 1_048_576;
+const MAX_INSTRUCTIONS: usize = 100_000;
+const MAX_LOCAL_COUNT: u16 = 4_096;
+const MAX_STACK_DEPTH: usize = 65_536;
 
 #[derive(Debug, Clone)]
 struct Diagnostic {
@@ -418,8 +423,24 @@ impl Compiler {
     }
 
     fn compile(mut self, statements: Vec<Statement>) -> Result<Bytecode, Diagnostic> {
-        for statement in statements { self.statement(statement)?; }
-        self.instructions.push(Instruction::Halt);
+        let mut returned = false;
+        for statement in statements {
+            let terminates = matches!(&statement, Statement::Return(_));
+            self.statement(statement)?;
+            if terminates {
+                returned = true;
+                break;
+            }
+            if self.instructions.len() > MAX_INSTRUCTIONS {
+                return Err(Diagnostic::new(1, 1, "program exceeds the bootstrap instruction limit"));
+            }
+        }
+        if !returned {
+            self.instructions.push(Instruction::Halt);
+        }
+        if self.next_slot > MAX_LOCAL_COUNT {
+            return Err(Diagnostic::new(1, 1, "program exceeds the bootstrap local-variable limit"));
+        }
         Ok(Bytecode { local_count: self.next_slot, instructions: self.instructions })
     }
 
@@ -546,10 +567,88 @@ fn operator_name(kind: TokenKind) -> &'static str {
 }
 
 fn compile_source(source: &str) -> Result<Bytecode, Diagnostic> {
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(Diagnostic::new(1, 1, "source file exceeds the 1 MiB bootstrap limit"));
+    }
     Compiler::new().compile(Parser::new(lex(source)?).parse()?)
 }
 
+fn verify_stack(depth: &mut usize, needed: usize, instruction: usize) -> Result<(), String> {
+    if *depth < needed {
+        return Err(format!(
+            "bytecode stack underflow at instruction {}: needs {}, has {}",
+            instruction, needed, *depth
+        ));
+    }
+    *depth -= needed;
+    Ok(())
+}
+
 impl Bytecode {
+    fn verify(&self) -> Result<(), String> {
+        if self.local_count > MAX_LOCAL_COUNT {
+            return Err("bytecode local-variable count exceeds the runtime limit".to_string());
+        }
+        if self.instructions.is_empty() || self.instructions.len() > MAX_INSTRUCTIONS {
+            return Err("bytecode instruction count is empty or exceeds the runtime limit".to_string());
+        }
+
+        let mut depth = 0usize;
+        let mut terminated = false;
+        for (index, instruction) in self.instructions.iter().enumerate() {
+            if terminated {
+                return Err(format!("instruction {} appears after a terminal instruction", index));
+            }
+            match instruction {
+                Instruction::PushInt(_) | Instruction::PushText(_) | Instruction::PushBool(_) => {
+                    depth += 1;
+                }
+                Instruction::Load(slot) => {
+                    if *slot >= self.local_count {
+                        return Err(format!("LOAD at instruction {} references invalid local slot {}", index, slot));
+                    }
+                    depth += 1;
+                }
+                Instruction::Store(slot) => {
+                    if *slot >= self.local_count {
+                        return Err(format!("STORE at instruction {} references invalid local slot {}", index, slot));
+                    }
+                    verify_stack(&mut depth, 1, index)?;
+                }
+                Instruction::Add | Instruction::Subtract | Instruction::Multiply
+                | Instruction::Divide | Instruction::Remainder | Instruction::Equal
+                | Instruction::NotEqual | Instruction::Less | Instruction::LessEqual
+                | Instruction::Greater | Instruction::GreaterEqual => {
+                    verify_stack(&mut depth, 2, index)?;
+                    depth += 1;
+                }
+                Instruction::Negate | Instruction::Not => {
+                    verify_stack(&mut depth, 1, index)?;
+                    depth += 1;
+                }
+                Instruction::Print | Instruction::Pop => {
+                    verify_stack(&mut depth, 1, index)?;
+                }
+                Instruction::Return | Instruction::Halt => {
+                    if depth != 0 {
+                        return Err(format!(
+                            "terminal instruction {} leaves {} value(s) on the stack",
+                            index, depth
+                        ));
+                    }
+                    terminated = true;
+                }
+            }
+            if depth > MAX_STACK_DEPTH {
+                return Err(format!("bytecode stack exceeds the runtime limit at instruction {}", index));
+            }
+        }
+        if !terminated {
+            return Err("bytecode has no terminal HALT or RETURN instruction".to_string());
+        }
+        Ok(())
+    }
+
     fn serialize(&self) -> String {
         let mut output = format!("{}\nLOCALS {}\n", BYTECODE_HEADER, self.local_count);
         for instruction in &self.instructions {
@@ -584,6 +683,9 @@ impl Bytecode {
     }
 
     fn deserialize(source: &str) -> Result<Self, String> {
+        if source.len() > MAX_BYTECODE_BYTES {
+            return Err("bytecode artifact exceeds the 1 MiB runtime limit".to_string());
+        }
         let mut lines = source.lines();
         if lines.next() != Some(BYTECODE_HEADER) {
             return Err("invalid bytecode header; expected OTBC 1".to_string());
@@ -592,6 +694,9 @@ impl Bytecode {
         let local_count = local_line.strip_prefix("LOCALS ")
             .ok_or_else(|| "invalid LOCALS header".to_string())?
             .parse::<u16>().map_err(|_| "invalid local variable count".to_string())?;
+        if local_count > MAX_LOCAL_COUNT {
+            return Err("bytecode local-variable count exceeds the runtime limit".to_string());
+        }
         let mut instructions = Vec::new();
         for (index, line) in lines.enumerate() {
             let parts: Vec<&str> = line.splitn(2, ' ').collect();
@@ -622,11 +727,13 @@ impl Bytecode {
                 _ => return Err(format!("unknown opcode '{}' at bytecode line {}", opcode, bytecode_line)),
             };
             instructions.push(instruction);
+            if instructions.len() > MAX_INSTRUCTIONS {
+                return Err("bytecode instruction count exceeds the runtime limit".to_string());
+            }
         }
-        if !matches!(instructions.last(), Some(Instruction::Halt) | Some(Instruction::Return)) {
-            return Err("bytecode must end with HALT or RETURN".to_string());
-        }
-        Ok(Self { local_count, instructions })
+        let bytecode = Self { local_count, instructions };
+        bytecode.verify()?;
+        Ok(bytecode)
     }
 }
 
@@ -668,6 +775,7 @@ fn pop_int(stack: &mut Vec<Value>) -> Result<i64, String> {
 }
 
 fn execute<W: Write>(bytecode: &Bytecode, output: &mut W) -> Result<(), String> {
+    bytecode.verify()?;
     let mut stack: Vec<Value> = Vec::new();
     let mut locals: Vec<Option<Value>> = vec![None; bytecode.local_count as usize];
     for instruction in &bytecode.instructions {
@@ -959,5 +1067,65 @@ mod tests {
     fn rejects_unsupported_entry_points() {
         let error = compile_source("fn start() {}").unwrap_err().to_string();
         assert!(error.contains("only fn main()"));
+    }
+
+    #[test]
+    fn rejects_bytecode_stack_underflow_before_execution() {
+        let bytecode = Bytecode {
+            local_count: 0,
+            instructions: vec![Instruction::Pop, Instruction::Halt],
+        };
+        let error = bytecode.verify().unwrap_err();
+        assert!(error.contains("stack underflow"));
+    }
+
+    #[test]
+    fn rejects_invalid_local_slots_before_execution() {
+        let bytecode = Bytecode {
+            local_count: 1,
+            instructions: vec![
+                Instruction::Load(1),
+                Instruction::Print,
+                Instruction::Halt,
+            ],
+        };
+        let error = bytecode.verify().unwrap_err();
+        assert!(error.contains("invalid local slot"));
+    }
+
+    #[test]
+    fn rejects_instructions_after_terminal_opcode() {
+        let bytecode = Bytecode {
+            local_count: 0,
+            instructions: vec![
+                Instruction::Halt,
+                Instruction::PushInt(1),
+            ],
+        };
+        let error = bytecode.verify().unwrap_err();
+        assert!(error.contains("after a terminal instruction"));
+    }
+
+    #[test]
+    fn rejects_terminal_with_unbalanced_stack() {
+        let bytecode = Bytecode {
+            local_count: 0,
+            instructions: vec![
+                Instruction::PushText("leftover".to_string()),
+                Instruction::Halt,
+            ],
+        };
+        let error = bytecode.verify().unwrap_err();
+        assert!(error.contains("leaves 1 value"));
+    }
+
+    #[test]
+    fn return_stops_compilation_of_unreachable_statements() {
+        let source = r#"use std::io; fn main() {
+            io::println("before");
+            return;
+            io::println("after");
+        }"#;
+        assert_eq!(run_source(source).unwrap(), "before\n");
     }
 }
