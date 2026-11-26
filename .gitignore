@@ -1,0 +1,6 @@
+/target/
+/.otya/
+**/.otya/
+*.otbc
+*.otpkg
+.DS_Store
