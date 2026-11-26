@@ -382,8 +382,9 @@ impl Parser {
         if self.check(kind) { Ok(self.advance()) } else { Err(Diagnostic::at(self.peek(), message)) }
     }
     fn advance(&mut self) -> &Token {
-        if !self.check(TokenKind::Eof) { self.current += 1; }
-        &self.tokens[self.current - 1]
+        let index = self.current;
+        if self.current + 1 < self.tokens.len() { self.current += 1; }
+        &self.tokens[index]
     }
     fn peek(&self) -> &Token { &self.tokens[self.current] }
     fn peek_next(&self) -> &Token {
