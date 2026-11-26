@@ -4,75 +4,82 @@ This roadmap is milestone-based, not date-based. A milestone is complete only wh
 
 ## Phase 0 — Foundation and decisions
 
-**Goal:** agree on the boundaries before implementation expands.
+Deliverables: platform architecture, Linux-first decision, Otya Language 0.1 draft, bootstrap/self-hosting plan, security model, licensing and contribution decision.
+
+Status: architecture documents are committed. Licensing and contribution governance remain open.
+
+## Phase 1 — Bootstrap compiler vertical slice
+
+Goal: compile and execute a small .ot program on a development host.
 
 Deliverables:
-- Platform architecture.
-- Otya Language 0.1 draft.
-- Linux-first kernel decision.
-- Rust bootstrap and self-hosting plan.
-- Initial security model.
-- Repository licensing and contribution decision.
+- Rust CLI and dependency-free compiler.
+- Lexer, parser and static checks for a deliberately small subset.
+- Versioned development bytecode and VM.
+- Source, build-artifact and error-path tests.
+- CI formatting, tests, lint and smoke checks.
+
+Status: implementation candidate is on feat/bootstrap-compiler-v0. Its initial CI run passed formatting, all compiler tests, strict Clippy, source checking, source execution, bytecode building and compiled-bytecode execution. Review and additional verifier/security work remain before this milestone is accepted as a stable compiler.
 
 Exit gate:
-- Architecture reviewed.
-- Language proposal reviewed.
-- Licensing and contribution policy approved before external code is accepted.
+- Clean CI build with no warnings.
+- All compiler and VM tests pass.
+- Source and compiled-bytecode examples produce identical expected output.
+- Unsupported syntax fails with a clear diagnostic.
 
-## Phase 1 — Minimal bootstrap toolchain
+## Phase 2 — Compiler correctness and runtime boundary
 
-**Goal:** execute a tiny, well-defined Otya program on a development host.
+Goal: strengthen the bootstrap before adding a portable production target.
 
 Deliverables:
-- Rust workspace and CLI.
-- .ot lexer and parser.
-- Type checking for the supported language subset.
-- Source diagnostics.
-- First compiler target.
-- Unit, parser and negative tests.
+- Source spans for every AST node and diagnostic.
+- Bytecode verifier with stack and slot analysis.
+- Separate compiler and VM libraries.
+- Fuzz/property tests for lexer, parser, serializer and verifier.
+- A documented runtime threat model.
+- A measured choice between a portable Otya VM target and WebAssembly/WASI.
 
 Exit gate:
-- Documented example compiles and runs in a clean CI environment.
-- Invalid programs fail with useful diagnostics.
-- Supported target and host versions are explicit.
+- Malformed bytecode is rejected before execution.
+- Error locations are accurate.
+- CI covers positive, negative and adversarial inputs.
 
-## Phase 2 — Runtime and standard library
+## Phase 3 — Language 0.1 and portable runtime
 
-**Goal:** run portable Otya modules with enforced permissions.
+Goal: implement the reviewed language subset and a versioned, portable execution contract.
 
 Deliverables:
-- Runtime host using the selected Wasm engine.
-- Versioned host interfaces.
-- Capability grants and resource limits.
-- Initial standard-library modules.
-- Test and debugging support.
+- Frozen grammar and semantic rules.
+- Standard library modules and API versioning.
+- Portable target backend.
+- Capability-based host interfaces.
+- Resource budgets and runtime conformance suite.
 
 Exit gate:
+- Language conformance suite passes.
 - Denied capabilities are actually denied.
-- Resource limits are verified.
-- Runtime compatibility and failure behavior are tested.
-- No unsupported security guarantee is claimed.
+- Host/runtime compatibility and failure behavior are tested.
 
-## Phase 3 — Engine services and package lifecycle
+## Phase 4 — Otya Engine on Linux
 
-**Goal:** make Otya Engine useful on an existing supported Linux distribution.
+Goal: make the engine installable on existing supported Linux distributions.
 
 Deliverables:
-- Engine service manager and health reporting.
-- Package manifest and dependency resolution.
-- Package integrity and signature model.
+- Engine lifecycle and supervised services.
+- Package metadata, dependency resolution and artifact verification.
 - Install, update, rollback and removal flows.
-- otya doctor and recovery diagnostics.
+- Health reporting and recovery diagnostics.
+- Supported-host matrix and documented system APIs.
 
 Exit gate:
 - Fresh install, upgrade, rollback and uninstall pass in isolated test hosts.
 - User data is preserved as documented.
-- Interrupted installs recover safely.
-- Packages cannot exceed their granted permissions.
+- Interrupted updates recover safely.
+- No ordinary app receives root privileges.
 
-## Phase 4 — Otya OS composition
+## Phase 5 — Otya OS composition
 
-**Goal:** assemble a bootable Otya operating environment.
+Goal: assemble a bootable Otya operating environment.
 
 Deliverables:
 - Supported Linux kernel and boot configuration.
@@ -88,15 +95,16 @@ Exit gate:
 - Recovery from a failed update.
 - Published release notes and support policy.
 
-## Phase 5 — Self-hosting and ecosystem
+## Phase 6 — Self-hosting and community
 
-**Goal:** reduce bootstrap dependence and open a safe contribution model.
+Goal: reduce bootstrap dependence and enable safe contributions.
 
 Deliverables:
 - Otya compiler implementation in .ot.
 - Repeatable self-hosting pipeline.
 - Stable public SDK and extension interfaces.
-- Contributor governance and review rotation.
+- Approved license, trademark policy and contributor terms.
+- Maintainer review, security response and release governance.
 - Public package and documentation infrastructure.
 
 Exit gate:
@@ -107,20 +115,12 @@ Exit gate:
 
 ## Always-on quality requirements
 
-Every phase must preserve:
-
-- Backward compatibility or a documented migration path.
-- Automated tests and clean-build evidence.
-- Security review for permissions and native code.
-- Dependency and artifact provenance.
-- Performance measurement on declared reference hardware.
-- Installation and recovery documentation.
-- Clear distinction between implemented, tested and deployed features.
+Every phase preserves backward compatibility or a documented migration path, automated tests and clean-build evidence, security review for privileged code, dependency provenance, performance measurements, installation and recovery documentation, and honest separation between implemented, tested and deployed features.
 
 ## Explicit non-goals for the first release
 
 - Writing a replacement kernel before the engine has proven its value.
-- Replacing the Otya ecosystem's existing backend, identity or product databases.
+- Replacing Otya's existing backend, identity or product databases.
 - Giving ordinary apps unrestricted root or host access.
 - Claiming every third-party API or service will work automatically.
-- Publishing a production or security certification without evidence.
+- Publishing production or security certification without evidence.
