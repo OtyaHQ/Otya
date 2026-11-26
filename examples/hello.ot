@@ -1,0 +1,7 @@
+module hello;
+
+use std::io;
+
+fn main() {
+    io::println("Hello from Otya!");
+}
