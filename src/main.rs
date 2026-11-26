@@ -641,9 +641,12 @@ fn encode_hex(bytes: &[u8]) -> String {
 }
 
 fn decode_hex(value: &str) -> Result<Vec<u8>, String> {
-    if value.len() % 2 != 0 { return Err("hex text must have an even number of characters".to_string()); }
-    let mut output = Vec::with_capacity(value.len() / 2);
-    for pair in value.as_bytes().chunks_exact(2) {
+    let (pairs, remainder) = value.as_bytes().as_chunks::<2>();
+    if !remainder.is_empty() {
+        return Err("hex text must have an even number of characters".to_string());
+    }
+    let mut output = Vec::with_capacity(pairs.len());
+    for pair in pairs {
         let high = (pair[0] as char).to_digit(16).ok_or_else(|| "non-hexadecimal character".to_string())?;
         let low = (pair[1] as char).to_digit(16).ok_or_else(|| "non-hexadecimal character".to_string())?;
         output.push(((high << 4) | low) as u8);
