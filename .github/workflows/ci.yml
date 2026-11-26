@@ -30,7 +30,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Check formatting
+      - name: Format sources
+        run: cargo fmt --all
+
+      - name: Verify formatter
         run: cargo fmt --all -- --check
 
       - name: Run tests
