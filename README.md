@@ -94,9 +94,13 @@ Third-party APIs and services are integrations, not guarantees. An adapter must 
 
 ## Development status
 
-The first milestones are architecture and language specification, a Rust bootstrap compiler, a constrained runtime, a small standard library and reproducible tests. The installable engine comes after those core contracts work.
+The architecture and language design documents are in place. The first Rust bootstrap compiler and development bytecode VM are implemented on the review branch `feat/bootstrap-compiler-v0`.
 
-No release should be described as production-ready until its supported platforms, installation and recovery flows, upgrade behavior, security boundaries, compatibility policy and test evidence are published.
+The current implementation has a deliberately small supported subset: one parameterless `fn main()`, local variables, integer arithmetic and comparisons, booleans, text, `io::println`, and a versioned development bytecode format. It can check source, run source, build bytecode and run a built artifact. The branch CI has passed formatting, tests, strict Clippy and source/bytecode smoke checks.
+
+This is a verified prototype milestone, not a stable Otya Language release. It is not yet a WebAssembly backend, capability-secure application runtime, installable system engine, package manager or bootable operating system. See [the compiler implementation boundary](docs/BOOTSTRAP_COMPILER.md) for exact limits.
+
+The next engineering gates are source-accurate diagnostics, bytecode verification, compiler/VM module separation, adversarial tests and a measured decision on the portable runtime target. No release should be described as production-ready until supported platforms, installation and recovery, upgrade behavior, security boundaries, compatibility policy and test evidence are published.
 
 ## Licensing and community status
 
