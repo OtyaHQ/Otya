@@ -19,7 +19,7 @@ Deliverables:
 - Source, build-artifact and error-path tests.
 - CI formatting, tests, lint and smoke checks.
 
-Status: implementation candidate is on feat/bootstrap-compiler-v0. Its initial CI run passed formatting, all compiler tests, strict Clippy, source checking, source execution, bytecode building and compiled-bytecode execution. Review and additional verifier/security work remain before this milestone is accepted as a stable compiler.
+Status: implementation candidate is on feat/bootstrap-compiler-v0. CI has passed formatting, compiler and VM tests, strict Clippy, source checking/execution, bytecode building and compiled-bytecode execution. A structural bytecode verifier, malformed-bytecode tests and source/artifact/resource limits are also implemented. Review, source-span diagnostics and broader adversarial testing remain before this milestone is accepted as a stable compiler.
 
 Exit gate:
 - Clean CI build with no warnings.
@@ -33,14 +33,14 @@ Goal: strengthen the bootstrap before adding a portable production target.
 
 Deliverables:
 - Source spans for every AST node and diagnostic.
-- Bytecode verifier with stack and slot analysis.
+- Expand bytecode verification with control-flow, type and malformed-input analysis.
 - Separate compiler and VM libraries.
 - Fuzz/property tests for lexer, parser, serializer and verifier.
 - A documented runtime threat model.
 - A measured choice between a portable Otya VM target and WebAssembly/WASI.
 
 Exit gate:
-- Malformed bytecode is rejected before execution.
+- Malformed bytecode and control-flow edge cases are rejected before execution.
 - Error locations are accurate.
 - CI covers positive, negative and adversarial inputs.
 
