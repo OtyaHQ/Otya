@@ -96,7 +96,7 @@ Third-party APIs and services are integrations, not guarantees. An adapter must 
 
 The architecture and language design documents are in place. The first Rust bootstrap compiler and development bytecode VM are implemented on the review branch `feat/bootstrap-compiler-v0`.
 
-The current implementation has a deliberately small supported subset: one parameterless `fn main()`, local variables, integer arithmetic and comparisons, booleans, text, `io::println`, and a versioned development bytecode format. It can check source, run source, build bytecode and run a built artifact. The branch CI has passed formatting, tests, strict Clippy and source/bytecode smoke checks.
+The current implementation has a deliberately small supported subset: one parameterless `fn main()`, local variables, integer arithmetic and comparisons, booleans, text, `io::println`, and a versioned development bytecode format. It can check source, run source, build bytecode and run a built artifact. A structural bytecode verifier checks stack depth, local-slot bounds and terminal instructions before execution; source/artifact sizes and runtime resources are bounded. The hardened branch CI has passed formatting, tests, strict Clippy and source/bytecode smoke checks.
 
 This is a verified prototype milestone, not a stable Otya Language release. It is not yet a WebAssembly backend, capability-secure application runtime, installable system engine, package manager or bootable operating system. See [the compiler implementation boundary](docs/BOOTSTRAP_COMPILER.md) for exact limits.
 
