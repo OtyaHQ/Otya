@@ -19,7 +19,7 @@ The supported source subset includes:
 - return from main.
 - UTF-8 string literals with basic escapes.
 
-The compiler performs static type checks for the supported subset. The VM checks bytecode stack and local-slot safety, and arithmetic uses checked operations.
+The compiler performs static type checks for the supported subset. The bytecode verifier checks stack depth, local-slot bounds, terminal instructions and structural consistency before execution. Source and bytecode artifacts have 1 MiB bootstrap limits; instruction, local and stack counts are bounded. Arithmetic uses checked operations.
 
 ## Commands implemented
 
@@ -44,7 +44,7 @@ This milestone is not yet:
 - An installer or bootable OS image.
 - A security boundary for hostile bytecode or applications.
 
-The initial bytecode format is a development artifact. Do not distribute it as a stable package format or treat it as a security boundary.
+The initial bytecode format is a development artifact. The verifier provides structural validation, not a hostile-code sandbox or complete type-safe execution proof. Do not distribute it as a stable package format or treat it as a security boundary.
 
 ## Next acceptance gates
 
