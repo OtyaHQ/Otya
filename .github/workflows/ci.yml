@@ -1,0 +1,56 @@
+name: Otya CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otya-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compiler:
+    name: Bootstrap compiler
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+      - name: Run Clippy
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Check example
+        run: cargo run --locked -- check examples/hello.ot
+
+      - name: Run source example
+        run: |
+          output="$(cargo run --locked --quiet -- run examples/hello.ot)"
+          test "$output" = "Hello from Otya!"
+
+      - name: Build bytecode
+        run: cargo run --locked -- build examples/hello.ot
+
+      - name: Run compiled bytecode
+        run: |
+          output="$(cargo run --locked --quiet -- run examples/.otya/build/hello.otbc)"
+          test "$output" = "Hello from Otya!"
