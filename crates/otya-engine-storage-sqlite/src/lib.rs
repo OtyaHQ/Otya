@@ -346,6 +346,41 @@ mod tests {
     }
 
     #[test]
+    fn reopens_existing_database_and_preserves_schema_identity() {
+        if root_user() {
+            return;
+        }
+        let data_dir = temporary_root("reopen");
+        create_data_dir(&data_dir);
+        let database = data_dir.join("engine.db");
+
+        {
+            let store = SqliteStore::open(&database).expect("database should initialize");
+            let application_id: i64 = store
+                .connection
+                .query_row("PRAGMA application_id", [], |row| row.get(0))
+                .expect("application id should be available");
+            assert_eq!(application_id, SQLITE_APPLICATION_ID);
+            assert_eq!(store.schema_version().expect("schema should read"), 1);
+        }
+
+        fs::set_permissions(&database, fs::Permissions::from_mode(0o444))
+            .expect("database should be made read-only for hardening test");
+        let reopened = SqliteStore::open(&database).expect("existing database should reopen");
+        assert_eq!(reopened.schema_version().expect("schema should read"), 1);
+        assert_eq!(
+            fs::metadata(&database)
+                .expect("database metadata should be available")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+        drop(reopened);
+        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
+    }
+
+    #[test]
     fn commits_successful_transactions_and_rolls_back_errors() {
         if root_user() {
             return;
@@ -398,11 +433,24 @@ mod tests {
             .execute_batch("CREATE TABLE third_party_data (id INTEGER PRIMARY KEY);")
             .expect("foreign table should be created");
         drop(foreign);
+        let original_contents = fs::read(&database).expect("foreign database should be readable");
 
         assert!(matches!(
             SqliteStore::open(&database),
             Err(SqliteStoreError::UnclaimedDatabase(_))
         ));
+        assert_eq!(
+            fs::read(&database).expect("foreign database should remain readable"),
+            original_contents
+        );
+        assert_eq!(
+            fs::metadata(&database)
+                .expect("foreign database metadata should be available")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
 
