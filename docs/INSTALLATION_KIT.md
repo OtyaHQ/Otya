@@ -17,7 +17,7 @@ The same versioned core is packaged in several forms:
 5. **Platform wrappers:** Flutter/Dart and Python packages built only after the underlying FFI API is stable.
 6. **Optional adapters:** provider or storage packages installed only when the customer needs them.
 
-The embedded library does not require installation of the optional service. The service does not require an Otya cloud account.
+The embedded library does not require installation of the optional service. The optional service runs under the installing OS user. It is not shared with unrelated OS users and does not require an Otya cloud account.
 
 ## Modular package layout
 
@@ -94,6 +94,10 @@ Initial commands:
 Destructive commands require a preview, explicit confirmation and a verified backup where data is involved. These commands are target behavior, not current implemented commands.
 
 ## Linux-first packaging
+
+The first installation profile is per-user. Respect XDG configuration, data, state, cache and runtime directories. See [Linux Platform Model](LINUX_PLATFORM_MODEL.md). Do not create a global service or root-owned shared database. A second OS user gets a separate installation. The local service socket is private to the installing UID; it does not isolate mutually untrusted processes sharing the same UID.
+
+The current configuration validator requires an absolute SQLite path. Environment variables and tilde characters inside TOML strings are not expanded yet.
 
 Initial service packages should target supported Linux x86_64 and aarch64 distributions. Consider a signed tarball first, then Debian and RPM packages after lifecycle tests. Windows and macOS installers follow once platform-specific service, secret and filesystem behavior is proven.
 
