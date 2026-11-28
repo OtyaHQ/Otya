@@ -1,23 +1,26 @@
 # Otya Engine
 
-**Otya is an independently installable, customer-operated systems engine and reusable integration kit.**
+**Otya is an independently installable, customer-operated application platform and systems engine.**
 
-Otya is installed and operated independently by the person or organization choosing to run it. Each installation belongs to its operator and its own local security boundary. It is not a shared multi-tenant service: the engine has no company registration, tenant IDs, end-user directory, central customer registry or remote installation heartbeat. The host application owns its own users and business identities. The operator owns the machine, operating system, data, provider accounts, credentials, backups, network and configuration.
+Otya is installed and operated independently by the person or organization choosing to run it. Each installation owns its identity realm, user directory, signing keys, workspaces, projects, service configuration, data, provider accounts and deployment credentials. It is not a shared multi-tenant service: unrelated installations do not share users, services, data or control planes, and no Otya-hosted account or remote heartbeat is required.
 
-The engine is built in Rust and is headless-first. It can be embedded in a host process, run as an optional local/server service, run as a Cloudflare Rust/WebAssembly Worker, or later run in a Linux container. It must remain useful without an Otya cloud account or a connection to Otya infrastructure. Otya Engine itself is not an Android APK, iOS app, desktop GUI or app-store product.
+The Rust core remains headless and portable, while the complete installation includes a local operator control plane and browser-based management console. An operator can use the UI without a terminal or use the CLI, SDK and APIs for development and automation. Workloads can run embedded, as local/server services, or through host adapters such as Cloudflare Workers. Otya is not a mandatory hosted SaaS or an Android/iOS app-store client. See [Private platform distribution](docs/PRIVATE_PLATFORM_DISTRIBUTION.md).
 
 ## What the engine provides
 
 - A reusable Rust core with stable, versioned interfaces.
 - An embeddable library for applications, with native bindings where needed.
-- An optional local service for background work and local IPC.
+- An operator-controlled service supervisor, management API and optional local IPC.
+- A browser-based operator console for non-developers, with guided setup, access management, service configuration, monitoring and deployments.
+- An installation-owned identity provider and authorization foundation, with local user/group management, sign-in, MFA, sessions, OIDC/OAuth and optional external federation.
+- A reusable UI kit, design system, templates and schema-driven application forms.
 - A CLI and installation kit for setup, configuration, health checks, upgrades, backup and recovery.
-- Pluggable storage, identity integration, messaging, filesystem, network and provider adapters.
+- Pluggable storage, identity, authorization, messaging, filesystem, network and provider adapters.
 - Reusable business and operational modules with explicit permissions.
 - Durable operations: idempotency, queues/outbox, retries, reconciliation and audit history.
 - Local diagnostics and observability with privacy-preserving defaults.
 
-The engine does not silently create a central Otya service or send customer data to Otya. Remote integrations are opt-in and configured with accounts and credentials controlled by the operator.
+The engine does not silently create a central Otya service or send customer data to Otya. Remote integrations are opt-in and configured with accounts and credentials controlled by the operator. The built-in identity service, management UI and shared modules are local to that operator's installation; they are not shared with other Otya customers.
 
 **One installation can manage many projects.** An individual developer or company can install Otya once, create workspaces, register multiple applications and deployment components, and explicitly grant selected projects access to shared capabilities. The operator gets one local management plane for inventory, configuration, secrets grants, deployments, health, backups and audit, while each application keeps its own source, data authority, authorization, runtime and release lifecycle. This is local/operator-controlled management, not a global Otya-hosted service or a cross-customer tenant pool. See [Multi-project operator architecture](docs/MULTI_PROJECT_OPERATOR_ARCHITECTURE.md).
 
@@ -78,7 +81,7 @@ Generic HTTP, signed webhooks, SMTP and S3-compatible storage are additional ada
 - Not a cloud provider or serverless platform.
 - Not a database service.
 - Not a replacement for Linux or the operator's operating system.
-- Not an identity provider by default.
+- Not a shared, Otya-hosted identity provider; each installation may run its own private identity service.
 - Not a programming language, compiler or language runtime.
 - Not a guarantee that third-party APIs, providers or operator infrastructure are available or compliant.
 
@@ -105,6 +108,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 ## Start here
 
 - [Engine architecture](docs/ARCHITECTURE.md)
+- [Private platform distribution: identity, UI and integrated services](docs/PRIVATE_PLATFORM_DISTRIBUTION.md)
+- [Multi-project operator architecture](docs/MULTI_PROJECT_OPERATOR_ARCHITECTURE.md)
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
 - [Configuration lifecycle and safe initialization](docs/CONFIGURATION_LIFECYCLE.md)
 - [Optional SQLite storage adapter](docs/STORAGE_SQLITE.md)
