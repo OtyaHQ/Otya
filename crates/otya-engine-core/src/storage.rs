@@ -21,7 +21,9 @@ pub struct StorageEntry {
 /// Common errors returned by every storage adapter.
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum StorageError {
-    #[error("invalid storage namespace {0:?}; use 1-128 lowercase ASCII letters, digits, dots, underscores or hyphens")]
+    #[error(
+        "invalid storage namespace {0:?}; use 1-128 lowercase ASCII letters, digits, dots, underscores or hyphens"
+    )]
     InvalidNamespace(String),
     #[error("storage key exceeds the 4096-byte limit")]
     KeyTooLarge,
