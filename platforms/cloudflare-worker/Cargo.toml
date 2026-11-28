@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 otya-engine-core = { path = "../../crates/otya-engine-core" }
+otya-engine-sdk = { path = "../../crates/otya-engine-sdk" }
+otya-example-catalog-app = { path = "../../examples/catalog-app" }
 worker = "=0.8.7"
 
 # Keep the Cloudflare host adapter in its own workspace. Its workers-rs
