@@ -19,13 +19,13 @@ pub use config::{
     EngineRuntimeConfig, ExecutionMode, StorageConfig, ValidationReport, parse_config,
     starter_config_toml,
 };
-pub use storage::{
-    MAX_STORAGE_KEY_BYTES, MAX_STORAGE_NAMESPACE_BYTES, MAX_STORAGE_SCAN_LIMIT,
-    MAX_STORAGE_VALUE_BYTES, Storage, StorageEntry, StorageError, StorageTransaction,
-};
 pub use paths::{
     EnginePaths, PathDiagnostic, PathResolutionError, discover_engine_paths,
     discover_engine_paths_for,
+};
+pub use storage::{
+    MAX_STORAGE_KEY_BYTES, MAX_STORAGE_NAMESPACE_BYTES, MAX_STORAGE_SCAN_LIMIT,
+    MAX_STORAGE_VALUE_BYTES, Storage, StorageEntry, StorageError, StorageTransaction,
 };
 
 #[cfg(target_os = "linux")]
