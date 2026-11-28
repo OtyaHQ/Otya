@@ -14,7 +14,7 @@ use otya_engine_core::{DiagnosticSeverity, discover_engine_paths, parse_config};
     name = "otya",
     version,
     about = "Operate a locally installed Otya Engine",
-    long_about = "Otya Engine runs in the environment selected and operated by its installer. These commands perform local checks only."
+    long_about = "Otya Engine runs in the environment selected and operated by its installer. These commands perform local checks only unless an explicit create or install action is selected."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -31,11 +31,14 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Show this operator's resolved local engine directories.
+    /// Show or explicitly prepare this operator's local engine directories.
     Paths {
         /// Print machine-readable JSON.
         #[arg(long)]
         json: bool,
+        /// Explicitly create private directories and enforce owner-only permissions.
+        #[arg(long)]
+        create: bool,
     },
     /// Validate operator-owned engine configuration.
     Config {
@@ -96,7 +99,7 @@ fn run(cli: Cli) -> Result<(), String> {
                 }
             }
         }
-        Command::Paths { json } => show_paths(json)?,
+        Command::Paths { json, create } => show_paths(json, create)?,
         Command::Config { command } => match command {
             ConfigCommand::Validate { file, json } => validate_config(&file, json)?,
         },
@@ -116,6 +119,14 @@ struct DoctorCheck {
     name: &'static str,
     status: &'static str,
     detail: String,
+}
+
+#[derive(serde::Serialize)]
+struct PreparedDirectoryView {
+    purpose: String,
+    path: String,
+    created: bool,
+    permissions_hardened: bool,
 }
 
 fn doctor_report() -> DoctorReport {
@@ -142,13 +153,45 @@ fn doctor_report() -> DoctorReport {
     }
 }
 
-fn show_paths(json: bool) -> Result<(), String> {
+fn show_paths(json: bool, create: bool) -> Result<(), String> {
     let paths = discover_engine_paths().map_err(|error| error.to_string())?;
+    let prepared = if create {
+        #[cfg(target_os = "linux")]
+        {
+            otya_engine_core::prepare_engine_directories(&paths)
+                .map_err(|error| {
+                    format!(
+                        "{error}. Earlier directories may already have been prepared; existing files were not deleted."
+                    )
+                })?
+                .into_iter()
+                .map(|directory| PreparedDirectoryView {
+                    purpose: directory.purpose.to_owned(),
+                    path: directory.path.display().to_string(),
+                    created: directory.created,
+                    permissions_hardened: directory.permissions_hardened,
+                })
+                .collect::<Vec<_>>()
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err(
+                "directory preparation is currently implemented only for Linux".to_owned(),
+            );
+        }
+    } else {
+        Vec::new()
+    };
 
     if json {
+        let output = serde_json::json!({
+            "paths": &paths,
+            "create_requested": create,
+            "prepared_directories": &prepared,
+        });
         println!(
             "{}",
-            serde_json::to_string_pretty(&paths)
+            serde_json::to_string_pretty(&output)
                 .map_err(|error| format!("could not encode path report: {error}"))?
         );
         return Ok(());
@@ -164,13 +207,29 @@ fn show_paths(json: bool) -> Result<(), String> {
         None => println!("runtime: unavailable (required before enabling per-user service mode)"),
     }
 
-    for diagnostic in paths.diagnostics {
+    for diagnostic in &paths.diagnostics {
         println!("warning [{}]: {}", diagnostic.code, diagnostic.message);
     }
 
-    println!();
-    println!("These are resolved path locations only. This command does not create");
-    println!("directories or verify owner, permissions, symlinks or filesystem safety.");
+    if create {
+        println!();
+        println!("Private directories prepared:");
+        for directory in &prepared {
+            println!(
+                "- {}: {} (created: {}, permissions_hardened: {})",
+                directory.purpose,
+                directory.path,
+                directory.created,
+                directory.permissions_hardened
+            );
+        }
+        println!("Existing files and data were not deleted.");
+    } else {
+        println!();
+        println!("Read-only path inspection: no directories or files were changed.");
+        println!("Use --create to explicitly prepare owner-only Otya directories.");
+    }
+
     Ok(())
 }
 
