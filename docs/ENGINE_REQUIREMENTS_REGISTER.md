@@ -38,7 +38,7 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] Typed errors, request IDs and local correlation context.
 - [ ] Lifecycle hooks and graceful shutdown.
 - [ ] Module registry, compatibility checks and capability grants.
-- [x] Backend-neutral storage and transaction contract in core, with bounded namespaces, keys, values and prefix scans; Linux SQLite adapter and CLI init/check smoke tests passed CI run 265.
+- [x] Backend-neutral storage and transaction contract in core, with bounded namespaces, keys, values and prefix scans; Linux SQLite adapter and CLI init/check smoke tests passed CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958).
 - [ ] Secret, transport, clock and full platform abstractions.
 - [ ] Adapter conformance and API compatibility tests.
 - [ ] No company_id, tenant_id or end-user directory in core schema.
