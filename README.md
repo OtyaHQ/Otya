@@ -43,11 +43,11 @@ All modes share the same engine core and versioned contracts.
 Otya does not provide mandatory hosted compute, cloud storage or a central database.
 
 - The host application may provide storage through a versioned storage interface.
-- SQLite and customer-managed PostgreSQL are planned as optional storage adapters; neither adapter is implemented in the current experimental branch.
+- An initial Linux-only SQLite adapter exists as a separate optional crate; the core and CLI do not depend on it. Customer-managed PostgreSQL remains planned.
 - Files can remain on the local filesystem or use an operator-selected object-storage adapter.
 - Credentials are resolved through the operator's operating-system secret store, environment/credential injection or an explicitly configured vault.
 
-The current configuration schema recognizes memory and SQLite settings, but the engine does not yet ship a working storage adapter or transaction layer. The starter config uses memory mode only to provide a safe embedded-development profile; it does not demonstrate a complete runtime. Do not put production data into this branch or infer database support from successful config validation.
+The SQLite crate is an initial, CI-tested foundation: it opens private operator-owned files, checks Otya database identity/schema metadata, enables WAL, exposes explicit rollback-safe transactions and runs SQLite integrity checks. It is not yet a generic storage abstraction or a complete persistence system: business schemas, the general migration framework, online backup/restore, recovery and stress/fault-injection testing remain incomplete. The starter config still uses memory storage and warns that it is volatile. This branch is experimental; do not put production data into it. See [SQLite adapter status and requirements](docs/STORAGE_SQLITE.md).
 
 ## Provider integrations
 
@@ -93,6 +93,7 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [Engine architecture](docs/ARCHITECTURE.md)
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
 - [Configuration lifecycle and safe initialization](docs/CONFIGURATION_LIFECYCLE.md)
+- [Optional SQLite storage adapter](docs/STORAGE_SQLITE.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
