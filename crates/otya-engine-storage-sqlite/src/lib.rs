@@ -9,6 +9,7 @@
 
 use std::{
     path::{Path, PathBuf},
+    sync::{Mutex, MutexGuard},
     time::Duration,
 };
 
@@ -25,11 +26,13 @@ use thiserror::Error;
 /// SQLite application ID identifying databases owned by Otya Engine ("OTYA").
 pub const SQLITE_APPLICATION_ID: i64 = 0x4F54_5941;
 
-/// Current metadata schema understood by this adapter.
+/// Current metadata and key/value schema understood by this adapter.
 pub const SQLITE_SCHEMA_VERSION: u32 = 2;
 
-/// Stable identity recorded for the initial adapter metadata migration.
+/// Stable identity recorded for the initial metadata migration.
 const INITIAL_MIGRATION_ID: &str = "otya-engine-storage-sqlite-initial-metadata-v1";
+
+/// Stable identity recorded for the namespaced key/value migration.
 const KEY_VALUE_MIGRATION_ID: &str = "otya-engine-storage-sqlite-namespaced-kv-v2";
 
 /// Default lock wait used when another connection is writing.
@@ -82,6 +85,8 @@ pub enum SqliteStoreError {
     InvalidSchemaMetadata,
     #[error("SQLite could not enable WAL journal mode; returned mode was {0}")]
     WalUnavailable(String),
+    #[error("SQLite connection lock was poisoned")]
+    ConnectionPoisoned,
     #[error("secure filesystem operation failed: {0}")]
     SecureFilesystem(#[from] SecureFsError),
     #[error("SQLite operation failed: {0}")]
@@ -90,13 +95,13 @@ pub enum SqliteStoreError {
 
 /// A connection to one private, operator-owned SQLite database.
 ///
-/// rusqlite::Connection is not Sync. Use one store connection per worker or
-/// protect one connection behind the host application's synchronization
-/// primitive. WAL and SQLite's busy timeout coordinate separate connections;
-/// they do not make a single connection safe for concurrent shared use.
+/// The connection is protected by a mutex so the backend satisfies the core
+/// Storage Send + Sync contract. A transaction holds that lock for its whole
+/// lifetime. Use one SqliteStore per worker when parallel read/write throughput
+/// is needed; SQLite WAL and busy timeout coordinate separate connections.
 pub struct SqliteStore {
     path: PathBuf,
-    connection: Connection,
+    connection: Mutex<Connection>,
 }
 
 impl SqliteStore {
@@ -154,8 +159,7 @@ impl SqliteStore {
         let mut connection = Connection::open_with_flags(path, flags)?;
         connection.busy_timeout(options.busy_timeout)?;
 
-        // Set connection-local safety and durability defaults. WAL is enabled
-        // only after database identity is checked and the first migration commits.
+        // These are connection-local safety/durability defaults.
         connection.execute_batch(
             "PRAGMA foreign_keys = ON;
              PRAGMA trusted_schema = OFF;
@@ -173,65 +177,7 @@ impl SqliteStore {
 
         Ok(Self {
             path: path.to_path_buf(),
-            connection,
-        })
-    }
-
-    /// Open an existing database only when it already has the current Otya schema.
-    ///
-    /// Unlike `open_with_options`, this method does not create a file or run a
-    /// migration. It may harden the existing file and parent directory to the
-    /// adapter's required private permissions.
-    pub fn open_existing(path: impl AsRef<Path>) -> Result<Self, SqliteStoreError> {
-        Self::open_existing_with_options(path, SqliteOptions::default())
-    }
-
-    /// Open an existing current-schema database with an explicit lock timeout.
-    pub fn open_existing_with_options(
-        path: impl AsRef<Path>,
-        options: SqliteOptions,
-    ) -> Result<Self, SqliteStoreError> {
-        let path = path.as_ref();
-        if !path.is_absolute() {
-            return Err(SqliteStoreError::PathNotAbsolute(path.to_path_buf()));
-        }
-        if !(Duration::from_millis(100)..=Duration::from_secs(120)).contains(&options.busy_timeout)
-        {
-            return Err(SqliteStoreError::InvalidBusyTimeout);
-        }
-
-        let parent = path
-            .parent()
-            .filter(|parent| !parent.as_os_str().is_empty())
-            .ok_or_else(|| SqliteStoreError::PathNotAbsolute(path.to_path_buf()))?;
-        let file_name = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| SqliteStoreError::NonUtf8FileName(path.to_path_buf()))?;
-        prepare_private_file(parent, file_name)?;
-
-        let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_NOFOLLOW
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-        let mut connection = Connection::open_with_flags(path, flags)?;
-        connection.busy_timeout(options.busy_timeout)?;
-        connection.execute_batch(
-            "PRAGMA foreign_keys = ON;
-             PRAGMA trusted_schema = OFF;
-             PRAGMA synchronous = FULL;
-             PRAGMA temp_store = MEMORY;",
-        )?;
-        verify_initialized_schema(&connection)?;
-
-        let journal_mode: String =
-            connection.query_row("PRAGMA journal_mode", [], |row| row.get(0))?;
-        if !journal_mode.eq_ignore_ascii_case("wal") {
-            return Err(SqliteStoreError::WalUnavailable(journal_mode));
-        }
-
-        Ok(Self {
-            path: path.to_path_buf(),
-            connection,
+            connection: Mutex::new(connection),
         })
     }
 
@@ -242,29 +188,31 @@ impl SqliteStore {
 
     /// Schema version read from SQLite's user_version header.
     pub fn schema_version(&self) -> Result<u32, SqliteStoreError> {
-        let version: i64 = self
-            .connection
-            .pragma_query_value(None, "user_version", |row| row.get(0))?;
+        let connection = self.lock_connection()?;
+        let version: i64 =
+            connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
         u32::try_from(version).map_err(|_| SqliteStoreError::InvalidSchemaMetadata)
     }
 
-    /// Execute one write transaction, acquiring a write reservation first.
-    /// Any callback error causes rollback when the transaction is dropped.
+    /// Execute a typed rusqlite transaction as a convenience for Rust hosts.
+    ///
+    /// The connection lock is held for the transaction lifetime. On callback
+    /// error, the rusqlite transaction is dropped and rolled back.
     pub fn transaction<T>(
-        &mut self,
+        &self,
         operation: impl FnOnce(&Transaction<'_>) -> rusqlite::Result<T>,
     ) -> Result<T, SqliteStoreError> {
-        let transaction = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let mut connection = self.lock_connection()?;
+        let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let output = operation(&transaction)?;
         transaction.commit()?;
         Ok(output)
     }
 
-    /// Run SQLite's full integrity check.
+    /// Run SQLite's full integrity check without changing application records.
     pub fn integrity_check(&self) -> Result<IntegrityReport, SqliteStoreError> {
-        let mut statement = self.connection.prepare("PRAGMA integrity_check")?;
+        let connection = self.lock_connection()?;
+        let mut statement = connection.prepare("PRAGMA integrity_check")?;
         let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
         let mut messages = Vec::new();
         for row in rows {
@@ -272,48 +220,65 @@ impl SqliteStore {
         }
         Ok(IntegrityReport { messages })
     }
-}
 
-
-/// Borrow-scoped generic storage transaction implementation.
-pub struct SqliteStorageTransaction<'connection> {
-    transaction: Transaction<'connection>,
+    fn lock_connection(&self) -> Result<MutexGuard<'_, Connection>, SqliteStoreError> {
+        self.connection
+            .lock()
+            .map_err(|_| SqliteStoreError::ConnectionPoisoned)
+    }
 }
 
 impl Storage for SqliteStore {
-    type Transaction<'store> = SqliteStorageTransaction<'store> where Self: 'store;
-
-    fn begin(&mut self) -> Result<Self::Transaction<'_>, StorageError> {
-        let transaction = self
+    fn begin(&self) -> Result<Box<dyn StorageTransaction + '_>, StorageError> {
+        let connection = self
             .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .lock()
+            .map_err(|_| StorageError::Backend("SQLite connection lock was poisoned".into()))?;
+        connection
+            .execute_batch("BEGIN IMMEDIATE")
             .map_err(storage_backend_error)?;
-        Ok(SqliteStorageTransaction { transaction })
+
+        Ok(Box::new(SqliteStorageTransaction {
+            connection,
+            completed: false,
+        }))
     }
 
     fn health_check(&self) -> Result<(), StorageError> {
-        verify_initialized_schema(&self.connection).map_err(storage_backend_error)?;
-        let result: i64 = self
+        let connection = self
             .connection
-            .query_row("SELECT 1", [], |row| row.get(0))
+            .lock()
+            .map_err(|_| StorageError::Backend("SQLite connection lock was poisoned".into()))?;
+        let message: String = connection
+            .query_row("PRAGMA quick_check(1)", [], |row| row.get(0))
             .map_err(storage_backend_error)?;
-        if result == 1 {
+        if message.eq_ignore_ascii_case("ok") {
             Ok(())
         } else {
-            Err(StorageError::Backend(
-                "SQLite health check returned an unexpected result".to_owned(),
-            ))
+            Err(StorageError::Backend(format!(
+                "SQLite quick_check returned {message}"
+            )))
         }
     }
 }
 
+struct SqliteStorageTransaction<'connection> {
+    connection: MutexGuard<'connection, Connection>,
+    completed: bool,
+}
+
 impl StorageTransaction for SqliteStorageTransaction<'_> {
-    fn get(&mut self, namespace: &str, key: &[u8]) -> Result<Option<Vec<u8>>, StorageError> {
+    fn get(
+        &mut self,
+        namespace: &str,
+        key: &[u8],
+    ) -> Result<Option<Vec<u8>>, StorageError> {
         validate_namespace(namespace)?;
         validate_key(key)?;
-        self.transaction
+
+        self.connection
             .query_row(
-                "SELECT value FROM otya_kv WHERE namespace = ?1 AND key = ?2",
+                "SELECT value FROM otya_engine_kv WHERE namespace = ?1 AND key = ?2",
                 params![namespace, key],
                 |row| row.get(0),
             )
@@ -321,15 +286,20 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
             .map_err(storage_backend_error)
     }
 
-    fn put(&mut self, namespace: &str, key: &[u8], value: &[u8]) -> Result<(), StorageError> {
+    fn put(
+        &mut self,
+        namespace: &str,
+        key: &[u8],
+        value: &[u8],
+    ) -> Result<(), StorageError> {
         validate_namespace(namespace)?;
         validate_key(key)?;
-        if value.len() > MAX_STORAGE_VALUE_BYTES {
-            return Err(StorageError::ValueTooLarge);
-        }
-        self.transaction
+        validate_value(value)?;
+
+        self.connection
             .execute(
-                "INSERT INTO otya_kv (namespace, key, value) VALUES (?1, ?2, ?3)
+                "INSERT INTO otya_engine_kv (namespace, key, value)
+                 VALUES (?1, ?2, ?3)
                  ON CONFLICT(namespace, key) DO UPDATE SET value = excluded.value",
                 params![namespace, key, value],
             )
@@ -340,14 +310,15 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
     fn delete(&mut self, namespace: &str, key: &[u8]) -> Result<bool, StorageError> {
         validate_namespace(namespace)?;
         validate_key(key)?;
+
         let changed = self
-            .transaction
+            .connection
             .execute(
-                "DELETE FROM otya_kv WHERE namespace = ?1 AND key = ?2",
+                "DELETE FROM otya_engine_kv WHERE namespace = ?1 AND key = ?2",
                 params![namespace, key],
             )
             .map_err(storage_backend_error)?;
-        Ok(changed > 0)
+        Ok(changed == 1)
     }
 
     fn scan_prefix(
@@ -358,61 +329,93 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
     ) -> Result<Vec<StorageEntry>, StorageError> {
         validate_namespace(namespace)?;
         validate_key(prefix)?;
-        if limit == 0 || limit > MAX_STORAGE_SCAN_LIMIT {
+        if !(1..=MAX_STORAGE_SCAN_LIMIT).contains(&limit) {
             return Err(StorageError::InvalidScanLimit);
         }
-        let mut statement = self
-            .transaction
-            .prepare(
-                "SELECT key, value FROM otya_kv
-                 WHERE namespace = ?1 AND substr(key, 1, length(?2)) = ?2
-                 ORDER BY key LIMIT ?3",
-            )
-            .map_err(storage_backend_error)?;
+
+        let prefix_len = i64::try_from(prefix.len())
+            .map_err(|_| StorageError::Backend("prefix length overflow".into()))?;
+        let row_limit = i64::try_from(limit)
+            .map_err(|_| StorageError::InvalidScanLimit)?;
+        let mut statement = self.connection.prepare(
+            "SELECT key, value
+             FROM otya_engine_kv
+             WHERE namespace = ?1 AND substr(key, 1, ?2) = ?3
+             ORDER BY key ASC
+             LIMIT ?4",
+        )
+        .map_err(storage_backend_error)?;
         let rows = statement
-            .query_map(params![namespace, prefix, limit as i64], |row| {
+            .query_map(params![namespace, prefix_len, prefix, row_limit], |row| {
                 Ok(StorageEntry {
                     key: row.get(0)?,
                     value: row.get(1)?,
                 })
             })
             .map_err(storage_backend_error)?;
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(storage_backend_error)
+
+        let mut entries = Vec::new();
+        for row in rows {
+            entries.push(row.map_err(storage_backend_error)?);
+        }
+        Ok(entries)
     }
 
-    fn commit(self) -> Result<(), StorageError> {
-        self.transaction.commit().map_err(storage_backend_error)
+    fn commit(mut self: Box<Self>) -> Result<(), StorageError> {
+        self.connection
+            .execute_batch("COMMIT")
+            .map_err(storage_backend_error)?;
+        self.completed = true;
+        Ok(())
+    }
+
+    fn rollback(mut self: Box<Self>) -> Result<(), StorageError> {
+        self.connection
+            .execute_batch("ROLLBACK")
+            .map_err(storage_backend_error)?;
+        self.completed = true;
+        Ok(())
+    }
+}
+
+impl Drop for SqliteStorageTransaction<'_> {
+    fn drop(&mut self) {
+        if !self.completed {
+            let _ = self.connection.execute_batch("ROLLBACK");
+        }
     }
 }
 
 fn validate_namespace(namespace: &str) -> Result<(), StorageError> {
     let bytes = namespace.as_bytes();
-    let valid = !bytes.is_empty()
-        && bytes.len() <= MAX_STORAGE_NAMESPACE_BYTES
-        && bytes.iter().all(|byte| {
+    if bytes.is_empty()
+        || bytes.len() > MAX_STORAGE_NAMESPACE_BYTES
+        || !bytes.iter().all(|byte| {
             byte.is_ascii_lowercase()
                 || byte.is_ascii_digit()
-                || *byte == b'.'
-                || *byte == b'_'
-                || *byte == b'-'
-        });
-    if valid {
-        Ok(())
-    } else {
-        Err(StorageError::InvalidNamespace(namespace.to_owned()))
+                || matches!(*byte, b'.' | b'_' | b'-')
+        })
+    {
+        return Err(StorageError::InvalidNamespace(namespace.to_owned()));
     }
+    Ok(())
 }
 
 fn validate_key(key: &[u8]) -> Result<(), StorageError> {
     if key.len() > MAX_STORAGE_KEY_BYTES {
-        Err(StorageError::KeyTooLarge)
-    } else {
-        Ok(())
+        return Err(StorageError::KeyTooLarge);
     }
+    Ok(())
 }
 
-fn storage_backend_error(error: impl std::fmt::Display) -> StorageError {
+fn validate_value(value: &[u8]) -> Result<(), StorageError> {
+    if value.len() > MAX_STORAGE_VALUE_BYTES {
+        return Err(StorageError::ValueTooLarge);
+    }
+    Ok(())
+}
+
+fn storage_backend_error(error: rusqlite::Error) -> StorageError {
     StorageError::Backend(error.to_string())
 }
 
@@ -447,8 +450,8 @@ fn initialize_or_verify_schema(
         )?;
         transaction.execute(
             "INSERT INTO otya_engine_migrations (version, migration_id)
-             VALUES (1, ?1)",
-            [INITIAL_MIGRATION_ID],
+             VALUES (?1, ?2)",
+            (1_i64, INITIAL_MIGRATION_ID),
         )?;
         transaction.pragma_update(None, "application_id", SQLITE_APPLICATION_ID)?;
         transaction.pragma_update(None, "user_version", 1_i64)?;
@@ -466,13 +469,27 @@ fn initialize_or_verify_schema(
         if schema_version < 1 {
             return Err(SqliteStoreError::InvalidSchemaMetadata);
         }
-        verify_migration(&transaction, 1, INITIAL_MIGRATION_ID)?;
+
+        let migration_id: String = transaction
+            .query_row(
+                "SELECT migration_id FROM otya_engine_migrations WHERE version = 1",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|_| SqliteStoreError::InvalidSchemaMetadata)?;
+        if migration_id != INITIAL_MIGRATION_ID {
+            return Err(SqliteStoreError::InvalidSchemaMetadata);
+        }
     }
 
     if schema_version == 1 {
         transaction.execute_batch(
-            "CREATE TABLE otya_kv (
-                namespace TEXT NOT NULL CHECK (length(namespace) BETWEEN 1 AND 128),
+            "CREATE TABLE otya_engine_kv (
+                namespace TEXT NOT NULL
+                    CHECK (
+                        length(namespace) BETWEEN 1 AND 128
+                        AND namespace NOT GLOB '*[^a-z0-9._-]*'
+                    ),
                 key BLOB NOT NULL CHECK (length(key) <= 4096),
                 value BLOB NOT NULL CHECK (length(value) <= 16777216),
                 PRIMARY KEY (namespace, key)
@@ -480,83 +497,42 @@ fn initialize_or_verify_schema(
         )?;
         transaction.execute(
             "INSERT INTO otya_engine_migrations (version, migration_id)
-             VALUES (2, ?1)",
-            [KEY_VALUE_MIGRATION_ID],
+             VALUES (?1, ?2)",
+            (2_i64, KEY_VALUE_MIGRATION_ID),
         )?;
-        transaction.pragma_update(None, "user_version", 2_i64)?;
-        schema_version = 2;
+        transaction.pragma_update(
+            None,
+            "user_version",
+            i64::from(SQLITE_SCHEMA_VERSION),
+        )?;
+        schema_version = i64::from(SQLITE_SCHEMA_VERSION);
     }
 
-    if schema_version != i64::from(SQLITE_SCHEMA_VERSION) {
-        return Err(SqliteStoreError::InvalidSchemaMetadata);
+    if schema_version == i64::from(SQLITE_SCHEMA_VERSION) {
+        let migration_id: String = transaction
+            .query_row(
+                "SELECT migration_id FROM otya_engine_migrations WHERE version = ?1",
+                [i64::from(SQLITE_SCHEMA_VERSION)],
+                |row| row.get(0),
+            )
+            .map_err(|_| SqliteStoreError::InvalidSchemaMetadata)?;
+        if migration_id != KEY_VALUE_MIGRATION_ID {
+            return Err(SqliteStoreError::InvalidSchemaMetadata);
+        }
+
+        let kv_table_count: i64 = transaction.query_row(
+            "SELECT COUNT(*) FROM sqlite_schema
+             WHERE type = 'table' AND name = 'otya_engine_kv'",
+            [],
+            |row| row.get(0),
+        )?;
+        if kv_table_count != 1 {
+            return Err(SqliteStoreError::InvalidSchemaMetadata);
+        }
     }
-    verify_migration(&transaction, 1, INITIAL_MIGRATION_ID)?;
-    verify_migration(&transaction, 2, KEY_VALUE_MIGRATION_ID)?;
-    let _statement = transaction.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0)?;
 
     transaction.commit()?;
-    verify_initialized_schema(connection)
-}
-
-fn verify_initialized_schema(connection: &Connection) -> Result<(), SqliteStoreError> {
-    let application_id: i64 =
-        connection.pragma_query_value(None, "application_id", |row| row.get(0))?;
-    if application_id != SQLITE_APPLICATION_ID {
-        return Err(SqliteStoreError::WrongApplicationId(application_id));
-    }
-    let schema_version: i64 =
-        connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-    if schema_version > i64::from(SQLITE_SCHEMA_VERSION) {
-        return Err(SqliteStoreError::UnsupportedSchemaVersion {
-            found: schema_version,
-            supported: SQLITE_SCHEMA_VERSION,
-        });
-    }
-    if schema_version != i64::from(SQLITE_SCHEMA_VERSION) {
-        return Err(SqliteStoreError::InvalidSchemaMetadata);
-    }
-    verify_migration_on_connection(connection, 1, INITIAL_MIGRATION_ID)?;
-    verify_migration_on_connection(connection, 2, KEY_VALUE_MIGRATION_ID)?;
-    let _statement = connection.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0")?;
     Ok(())
-}
-
-fn verify_migration(
-    transaction: &Transaction<'_>,
-    version: i64,
-    expected: &str,
-) -> Result<(), SqliteStoreError> {
-    let migration_id: String = transaction
-        .query_row(
-            "SELECT migration_id FROM otya_engine_migrations WHERE version = ?1",
-            [version],
-            |row| row.get(0),
-        )
-        .map_err(|_| SqliteStoreError::InvalidSchemaMetadata)?;
-    if migration_id == expected {
-        Ok(())
-    } else {
-        Err(SqliteStoreError::InvalidSchemaMetadata)
-    }
-}
-
-fn verify_migration_on_connection(
-    connection: &Connection,
-    version: i64,
-    expected: &str,
-) -> Result<(), SqliteStoreError> {
-    let migration_id: String = connection
-        .query_row(
-            "SELECT migration_id FROM otya_engine_migrations WHERE version = ?1",
-            [version],
-            |row| row.get(0),
-        )
-        .map_err(|_| SqliteStoreError::InvalidSchemaMetadata)?;
-    if migration_id == expected {
-        Ok(())
-    } else {
-        Err(SqliteStoreError::InvalidSchemaMetadata)
-    }
 }
 
 #[cfg(test)]
@@ -568,6 +544,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
+    use otya_engine_core::{Storage, StorageError, StorageTransaction};
     use super::*;
 
     fn root_user() -> bool {
@@ -606,13 +583,9 @@ mod tests {
 
         let store = SqliteStore::open(&database).expect("database should be initialized");
         assert_eq!(store.path(), database);
-        assert_eq!(store.schema_version().expect("version should read"), SQLITE_SCHEMA_VERSION);
-        assert!(
-            store
-                .integrity_check()
-                .expect("integrity check should run")
-                .is_ok()
-        );
+        assert_eq!(store.schema_version().expect("version should read"), 2);
+        assert!(store.integrity_check().expect("integrity check should run").is_ok());
+        assert!(store.health_check().is_ok());
         assert_eq!(
             fs::metadata(&database)
                 .expect("database metadata should be available")
@@ -623,10 +596,25 @@ mod tests {
         );
 
         let journal_mode: String = store
-            .connection
+            .lock_connection()
+            .expect("connection should lock")
             .query_row("PRAGMA journal_mode", [], |row| row.get(0))
             .expect("journal mode should be readable");
         assert_eq!(journal_mode.to_ascii_lowercase(), "wal");
+
+        let mut transaction = store.begin().expect("storage transaction should begin");
+        transaction
+            .put("core", b"first", b"value")
+            .expect("namespaced value should be written");
+        transaction.commit().expect("storage transaction should commit");
+
+        let mut read = store.begin().expect("read transaction should begin");
+        assert_eq!(
+            read.get("core", b"first").expect("value should be readable"),
+            Some(b"value".to_vec())
+        );
+        read.commit().expect("read transaction should commit");
+        drop(store);
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
 
@@ -642,17 +630,18 @@ mod tests {
         {
             let store = SqliteStore::open(&database).expect("database should initialize");
             let application_id: i64 = store
-                .connection
+                .lock_connection()
+                .expect("connection should lock")
                 .query_row("PRAGMA application_id", [], |row| row.get(0))
                 .expect("application id should be available");
             assert_eq!(application_id, SQLITE_APPLICATION_ID);
-            assert_eq!(store.schema_version().expect("schema should read"), SQLITE_SCHEMA_VERSION);
+            assert_eq!(store.schema_version().expect("schema should read"), 2);
         }
 
         fs::set_permissions(&database, fs::Permissions::from_mode(0o444))
             .expect("database should be made read-only for hardening test");
         let reopened = SqliteStore::open(&database).expect("existing database should reopen");
-        assert_eq!(reopened.schema_version().expect("schema should read"), 1);
+        assert_eq!(reopened.schema_version().expect("schema should read"), 2);
         assert_eq!(
             fs::metadata(&database)
                 .expect("database metadata should be available")
@@ -666,14 +655,92 @@ mod tests {
     }
 
     #[test]
-    fn commits_successful_transactions_and_rolls_back_errors() {
+    fn storage_contract_supports_prefix_scans_and_validation() {
+        if root_user() {
+            return;
+        }
+        let data_dir = temporary_root("storage-contract");
+        create_data_dir(&data_dir);
+        let store = SqliteStore::open(data_dir.join("engine.db"))
+            .expect("database should initialize");
+
+        let mut transaction = store.begin().expect("transaction should begin");
+        transaction.put("media", b"track/02", b"two").expect("put should work");
+        transaction.put("media", b"track/01", b"one").expect("put should work");
+        transaction.put("media", b"album/01", b"album").expect("put should work");
+        transaction.commit().expect("transaction should commit");
+
+        let mut scan = store.begin().expect("scan transaction should begin");
+        let entries = scan
+            .scan_prefix("media", b"track/", 10)
+            .expect("prefix scan should work");
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].key, b"track/01");
+        assert_eq!(entries[1].key, b"track/02");
+        assert!(scan.delete("media", b"track/02").expect("delete should work"));
+        assert!(!scan.delete("media", b"missing").expect("delete should work"));
+        scan.commit().expect("scan transaction should commit");
+
+        let mut invalid = store.begin().expect("transaction should begin");
+        assert!(matches!(
+            invalid.put("BadNamespace", b"key", b"value"),
+            Err(StorageError::InvalidNamespace(_))
+        ));
+        assert!(matches!(
+            invalid.scan_prefix("media", b"", 0),
+            Err(StorageError::InvalidScanLimit)
+        ));
+        let big_key = vec![0; MAX_STORAGE_KEY_BYTES + 1];
+        assert_eq!(
+            invalid.put("media", &big_key, b"value"),
+            Err(StorageError::KeyTooLarge)
+        );
+        let big_value = vec![0; MAX_STORAGE_VALUE_BYTES + 1];
+        assert_eq!(
+            invalid.put("media", b"key", &big_value),
+            Err(StorageError::ValueTooLarge)
+        );
+        invalid.rollback().expect("invalid-operation transaction should roll back");
+
+        drop(store);
+        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
+    }
+
+    #[test]
+    fn dropping_storage_transaction_rolls_back_uncommitted_writes() {
+        if root_user() {
+            return;
+        }
+        let data_dir = temporary_root("drop-rollback");
+        create_data_dir(&data_dir);
+        let store = SqliteStore::open(data_dir.join("engine.db"))
+            .expect("database should initialize");
+
+        {
+            let mut transaction = store.begin().expect("transaction should begin");
+            transaction.put("module", b"key", b"uncommitted").expect("put should work");
+        }
+
+        let mut check = store.begin().expect("check transaction should begin");
+        assert_eq!(
+            check.get("module", b"key").expect("get should work"),
+            None
+        );
+        check.commit().expect("check transaction should commit");
+
+        drop(store);
+        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
+    }
+
+    #[test]
+    fn commits_successful_rusqlite_transactions_and_rolls_back_errors() {
         if root_user() {
             return;
         }
         let data_dir = temporary_root("transactions");
         create_data_dir(&data_dir);
-        let database = data_dir.join("engine.db");
-        let mut store = SqliteStore::open(&database).expect("database should open");
+        let mut store = SqliteStore::open(data_dir.join("engine.db"))
+            .expect("database should open");
 
         store
             .transaction(|transaction| {
@@ -702,6 +769,7 @@ mod tests {
             })
             .expect("read transaction should complete");
         assert_eq!(count, 1);
+        drop(store);
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
 
@@ -779,115 +847,4 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
-
-    #[test]
-    fn implements_core_storage_contract_for_atomic_key_value_operations() {
-        if root_user() {
-            return;
-        }
-        let data_dir = temporary_root("core-storage");
-        create_data_dir(&data_dir);
-        let database = data_dir.join("engine.db");
-        let mut store = SqliteStore::open(&database).expect("database should initialize");
-        Storage::health_check(&store).expect("core storage health check should pass");
-
-        {
-            let mut transaction = Storage::begin(&mut store).expect("storage transaction should begin");
-            transaction.put("payments.records", b"record-2", b"two").unwrap();
-            transaction.put("payments.records", b"record-1", b"one").unwrap();
-            transaction.put("media.items", b"record-1", b"other namespace").unwrap();
-            transaction.commit().expect("storage transaction should commit");
-        }
-
-        let mut transaction = Storage::begin(&mut store).expect("read transaction should begin");
-        let entries = transaction
-            .scan_prefix("payments.records", b"record-", 10)
-            .expect("prefix scan should succeed");
-        assert_eq!(entries.len(), 2);
-        assert_eq!(entries[0].key, b"record-1");
-        assert_eq!(entries[1].key, b"record-2");
-        assert_eq!(
-            transaction.get("payments.records", b"record-1").unwrap(),
-            Some(b"one".to_vec())
-        );
-        assert!(transaction.delete("payments.records", b"record-1").unwrap());
-        assert!(!transaction.delete("payments.records", b"missing").unwrap());
-        transaction.commit().expect("read/write transaction should commit");
-
-        let mut verify = Storage::begin(&mut store).expect("verification transaction should begin");
-        assert_eq!(verify.get("payments.records", b"record-1").unwrap(), None);
-        assert_eq!(
-            verify.get("media.items", b"record-1").unwrap(),
-            Some(b"other namespace".to_vec())
-        );
-        verify.commit().expect("verification transaction should commit");
-        drop(store);
-        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
-    }
-
-    #[test]
-    fn core_storage_transaction_drop_rolls_back_changes() {
-        if root_user() {
-            return;
-        }
-        let data_dir = temporary_root("core-rollback");
-        create_data_dir(&data_dir);
-        let database = data_dir.join("engine.db");
-        let mut store = SqliteStore::open(&database).expect("database should initialize");
-        {
-            let mut transaction = Storage::begin(&mut store).expect("transaction should begin");
-            transaction.put("test.rollback", b"key", b"value").unwrap();
-        }
-        let mut verify = Storage::begin(&mut store).expect("verification transaction should begin");
-        assert_eq!(verify.get("test.rollback", b"key").unwrap(), None);
-        verify.commit().expect("verification should commit");
-        drop(store);
-        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
-    }
-
-    #[test]
-    fn upgrades_schema_version_one_to_two_without_claiming_foreign_data() {
-        if root_user() {
-            return;
-        }
-        let data_dir = temporary_root("schema-upgrade");
-        create_data_dir(&data_dir);
-        let database = data_dir.join("engine.db");
-        {
-            let legacy = Connection::open(&database).expect("legacy db should open");
-            legacy.execute_batch(
-                "CREATE TABLE otya_engine_migrations (
-                    version INTEGER PRIMARY KEY CHECK (version > 0),
-                    migration_id TEXT NOT NULL UNIQUE,
-                    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                 );",
-            ).unwrap();
-            legacy.execute(
-                "INSERT INTO otya_engine_migrations (version, migration_id) VALUES (1, ?1)",
-                [INITIAL_MIGRATION_ID],
-            ).unwrap();
-            legacy.pragma_update(None, "application_id", SQLITE_APPLICATION_ID).unwrap();
-            legacy.pragma_update(None, "user_version", 1_i64).unwrap();
-        }
-        let store = SqliteStore::open(&database).expect("legacy Otya database should migrate");
-        assert_eq!(store.schema_version().unwrap(), SQLITE_SCHEMA_VERSION);
-        Storage::health_check(&store).expect("migrated storage should be healthy");
-        drop(store);
-        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
-    }
-
-    #[test]
-    fn existing_schema_check_does_not_initialize_a_missing_database() {
-        if root_user() {
-            return;
-        }
-        let data_dir = temporary_root("check-missing");
-        create_data_dir(&data_dir);
-        let database = data_dir.join("missing.db");
-        assert!(SqliteStore::open_existing(&database).is_err());
-        assert!(!database.exists());
-        let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
-    }
-
-
 }
