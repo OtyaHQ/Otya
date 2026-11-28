@@ -66,21 +66,16 @@ impl Application for CatalogApplication {
         &MANIFEST
     }
 
-    fn handle(
-        &self,
-        request: ApplicationRequest,
-    ) -> Result<ApplicationResponse, ApplicationError> {
+    fn handle(&self, request: ApplicationRequest) -> Result<ApplicationResponse, ApplicationError> {
         match (request.method(), request.path()) {
-            (HttpMethod::Get, "/api/v1/catalog/items") => {
-                ApplicationResponse::json(
-                    200,
-                    &CatalogResponse {
-                        application: "org.otya.examples.catalog",
-                        demo_only: true,
-                        items: &ITEMS,
-                    },
-                )
-            }
+            (HttpMethod::Get, "/api/v1/catalog/items") => ApplicationResponse::json(
+                200,
+                &CatalogResponse {
+                    application: "org.otya.examples.catalog",
+                    demo_only: true,
+                    items: &ITEMS,
+                },
+            ),
             (HttpMethod::Get, "/api/v1/catalog/about") => ApplicationResponse::json(
                 200,
                 &serde_json::json!({
