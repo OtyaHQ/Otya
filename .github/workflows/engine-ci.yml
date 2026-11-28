@@ -43,6 +43,7 @@ jobs:
         run: |
           cargo run -p otya-engine-cli -- doctor --json
           cargo run -p otya-engine-cli -- paths --json
+          cargo run -p otya-engine-cli -- paths --instance ci-isolated --create --json
 
       - name: Validate example configuration
         run: cargo run -p otya-engine-cli -- config validate --file examples/otya-engine.toml
