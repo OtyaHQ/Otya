@@ -62,6 +62,12 @@ Otya does not provide mandatory hosted compute, cloud storage or a central datab
 
 The SQLite adapter implements the core storage contract: namespaced byte-key/value operations, explicit commit with rollback on drop, bounded prefix scans, WAL, private database files, a v1-to-v2 schema upgrade and non-creating current-schema checks. The full integration passed Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), including stable formatting, Clippy, tests, CLI storage smoke tests, release build and Rust 1.85 checks. Business-module schemas, a general migration runner, online backup/restore, crash recovery and stress/fault-injection testing remain incomplete. The starter config still uses memory storage and warns that it is volatile. This branch is experimental; do not put production data into it. See [SQLite adapter status and requirements](docs/STORAGE_SQLITE.md).
 
+## Bring your own infrastructure
+
+Otya does not host user applications, databases, object storage, email, payment services or cloud resources. Operators connect accounts and resources they already own. Otya Connect is the planned provider-connection layer for Cloudflare, Firebase, Supabase, SMTP/Resend, payment, AI, storage and custom REST/webhook services. It stores credentials in the operator's own installation vault, checks scopes, maps provider capabilities and prepares deployments with explicit approval. Operators pay providers directly. See [Bring-your-own-infrastructure provider architecture](docs/BYI_PROVIDER_CONNECTIONS.md).
+
+A provider connection does not mean Otya is hosting that provider or that all providers are interchangeable. Use a local Linux adapter when the operator wants a local service. Where an app runs inside a provider runtime, use that provider's native bindings and secret facilities where supported. Already deployed apps must not depend on the management console being online.
+
 ## Provider integrations
 
 Cloudflare, GitHub, Resend and Firebase are optional adapters, not engine dependencies:
@@ -108,6 +114,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 ## Start here
 
 - [Engine architecture](docs/ARCHITECTURE.md)
+- [Otya brand and product identity](docs/BRAND_AND_PRODUCT_IDENTITY.md)
+- [Bring-your-own-infrastructure provider connections](docs/BYI_PROVIDER_CONNECTIONS.md)
 - [Private platform distribution: identity, UI and integrated services](docs/PRIVATE_PLATFORM_DISTRIBUTION.md)
 - [Multi-project operator architecture](docs/MULTI_PROJECT_OPERATOR_ARCHITECTURE.md)
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
