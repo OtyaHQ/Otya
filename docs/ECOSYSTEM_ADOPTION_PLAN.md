@@ -16,6 +16,23 @@ Otya Engine should power shared runtime capabilities underneath Otya application
 - **OHub** is public developer/partner documentation, not the OWeb product frontend and not a runtime application.
 - **O** and **Omy Play** have Flutter clients. Their Android packages are clients of product APIs; they do not turn Otya Engine into an APK or Android app.
 
+## Repository consolidation decisions
+
+Consolidate shared contracts and infrastructure; do not merge product repositories simply to make them appear to use one engine.
+
+| Keep separate | Combine or standardize |
+|---|---|
+| Otya Engine, OEnd, OID and each product's source/data authority | Shared versioned API contracts, request/error conventions, service-binding rules and CI templates |
+| OPoint business rules, company/branch access and financial ledger | Generic idempotency, retry, scheduling and audit primitives only after Engine conformance and product acceptance tests |
+| Omy Play client, local media, playback, private vault and product backend | Connected-service plumbing where it does not weaken offline behavior |
+| O owner application, privileged approvals and owner data | Reusable non-privileged task execution after OEnd/OID authorization |
+| OWeb public website and OHub developer documentation | Shared brand, navigation links and published API/SDK documentation; do not repurpose OHub as the website |
+| OBackup and its recovery boundary | Backup protocols and verification tooling, without moving backup secrets or recovery authority into Engine |
+
+OID should remain a separately deployable identity service behind OEnd's one public API gateway. OEnd and OID should share contracts and routes, not be collapsed into one Worker or repository. OPoint, Omy Play and O remain separate products with their own authorization and data authority.
+
+The canonical Omy Play source repository in the connected organization is `OtyaHQ/Omy`; `Omy_Play` is a historical repository slug/reference. New links and integrations should use the canonical `Omy` repository while preserving existing product/API compatibility paths.
+
 ## Application access model
 
 ```text
@@ -72,7 +89,7 @@ OHub does not need to run an Engine instance merely because it documents Otya. F
 
 ## Runtime selection
 
-- **Cloudflare Workers/WebAssembly:** short request/response work and host-provided bindings. The current adapter exposes health/version/capability metadata plus a read-only sample; it is not yet a production business API.
+- **Cloudflare Workers/WebAssembly:** short request/response work and host-provided bindings. The current adapter exposes health/version/capability metadata plus a read-only sample; it is not yet a production business API. The preview Worker may expose this non-sensitive demo on `workers.dev`; the production Engine Worker has `workers_dev = false` and is reached only through OEnd's private Service Binding.
 - **Linux native library/service:** first full runtime for filesystem, SQLite and longer-running operations.
 - **OCI container/VPS:** later Linux deployment profile where a full process environment is needed.
 - **Other hosts:** add adapters only after host contract conformance tests exist.
