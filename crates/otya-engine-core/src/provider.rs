@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn provider_metadata_serializes_without_raw_credential_values() {
-        let encoded = serde_json::to_string(&connection()).expect("metadata serializes");
+        let encoded = toml::to_string(&connection()).expect("metadata serializes");
         assert!(encoded.contains("vault-cloudflare-deploy"));
         assert!(!encoded.contains("secret_value"));
         assert!(!encoded.contains("api_key"));
