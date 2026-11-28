@@ -1,0 +1,48 @@
+name: Otya Mobile and Web Portability
+
+on:
+  push:
+    branches:
+      - main
+      - "engine-only/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otya-mobile-portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-core:
+    name: Compile portable core for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - x86_64-linux-android
+          - wasm32-unknown-unknown
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install stable Rust and target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add "${{ matrix.target }}"
+
+      - name: Compile the platform-neutral core
+        run: cargo check -p otya-engine-core --target "${{ matrix.target }}"
+
+      - name: Record target scope
+        run: |
+          echo "This is a compile-compatibility check for the portable core."
+          echo "It does not claim a complete Android app, APK, iOS app, JNI/FFI bridge or Cloudflare Worker adapter."
