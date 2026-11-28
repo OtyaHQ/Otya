@@ -1,7 +1,7 @@
 #![cfg(target_os = "linux")]
 
 use std::{
-    fs, io,
+    io,
     path::{Component, Path, PathBuf},
 };
 
