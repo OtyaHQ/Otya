@@ -5,6 +5,8 @@
 
 Otya Engine should power shared runtime capabilities underneath Otya applications and websites. It must not absorb product ownership, user interfaces, data authority, authentication or legal/business rules. First-party products must consume the same public SDK and host contracts as an unrelated independent operator; the [Independent Operator Guide](INDEPENDENT_OPERATOR_GUIDE.md) documents that model and the audited resource-retirement decisions.
 
+The company should use **one operator-controlled Engine installation and one Otya workspace** to manage all product projects and deployment components. This centralizes inventory, configuration, approved shared services, secrets grants, deployment planning, monitoring, backup coordination and audit. It does not merge product repositories, combine databases, grant every app access to every service or make Engine a mandatory runtime dependency for each request. The [Multi-project operator architecture](MULTI_PROJECT_OPERATOR_ARCHITECTURE.md) defines the workspace, project, component, environment and sharing model.
+
 ## Product boundary
 
 - **Otya Engine** is the reusable headless foundation: runtime contracts, application SDK, host adapters, storage/operation primitives and later durable jobs, events and provider adapters.
