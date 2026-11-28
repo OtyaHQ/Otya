@@ -10,14 +10,17 @@ Otya is not a hosted service. Installation must not create an Otya account, phon
 
 The same versioned core is packaged in several forms:
 
+The full operator distribution is a coordinated bundle, not only a crate: it includes the supervisor, authenticated management API, browser console, installation-owned identity/login module and selected first-party services. Those services belong only to the installing operator. Embedded-library consumers may still select a smaller dependency-only package.
+
 1. **Rust crate:** the preferred integration for Rust applications.
 2. **Native library:** a stable C ABI for host applications that cannot link Rust directly.
-3. **Operator CLI:** install, configure, diagnose, migrate, back up, restore and upgrade.
-4. **Optional local service:** a supervised process for durable background work and local IPC.
-5. **Platform wrappers:** Flutter/Dart and Python packages built only after the underlying FFI API is stable.
-6. **Optional adapters:** provider or storage packages installed only when the operator needs them. The Linux SQLite adapter is a separate crate and is not linked into the core; the Linux CLI includes explicit storage commands and links the adapter only on Linux.
+3. **Operator console and management API:** first-run setup, members, projects, permissions, services, deployments, health and recovery for non-developers.
+4. **Operator CLI:** install, configure, diagnose, migrate, back up, restore and upgrade.
+5. **Platform service supervisor:** supervises the local control plane, identity and enabled service modules in the full platform profile; embedded-only consumers can omit it.
+6. **Platform wrappers:** Flutter/Dart and Python packages built only after the underlying FFI API is stable.
+7. **Optional adapters:** provider or storage packages installed only when the operator needs them. The Linux SQLite adapter is a separate crate and is not linked into the core; the Linux CLI includes explicit storage commands and links the adapter only on Linux.
 
-The embedded library does not require installation of the optional service. The optional service runs under the installing OS user. It is not shared with unrelated OS users and does not require an Otya cloud account.
+The embedded library does not require installation of the full platform supervisor. In the full platform profile, local services run under an operator-selected unprivileged service identity, with separate state and secrets. They are not shared with unrelated installations and do not require an Otya cloud account.
 
 ## Modular package layout
 
