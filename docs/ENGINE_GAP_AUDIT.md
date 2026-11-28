@@ -5,9 +5,9 @@
 
 ## Product invariant
 
-Otya is independently installed and operated by one operator per isolated installation. The operator may be an individual or an organization. The engine does not need to know the operator's company, create Otya accounts, register a tenant, report an installation to Otya or join unrelated installations into a shared service.
+Otya is independently installed and operated by one operator per isolated installation. The operator may be an individual or an organization. The engine does not register the operator with Otya or join unrelated installations into a shared service. Each installation may keep its own local organization/workspace/project registry and private identity realm.
 
-One operator may run an application with many of its own users. Those end users, organizations, permissions and business identities belong to the host application. This product rule does not mean an Otya-powered application can have only one user.
+One operator may run many projects and use an installation-owned identity provider, login portal, user/group directory and shared platform services across selected applications. Those users and signing keys exist only in that installation. Each application still owns its business permissions and resource authorization. This product rule does not mean an Otya-powered application can have only one user.
 
 A server installation may use a dedicated unprivileged OS service account. That is a local process/filesystem boundary chosen by the operator; it is not a shared multi-customer service. Multiple installations may communicate only when the operator explicitly configures such a connection.
 
@@ -72,6 +72,18 @@ The filesystem/config lifecycle and SQLite adapter remain experimental. Configur
 | Performance | Release profile configured; no benchmark baseline | Startup, idle memory, binary size, throughput, latency, concurrency and soak benchmarks with named reference hardware |
 | Release engineering | Basic CI exists | Cargo.lock committed and enforced with --locked, multi-architecture builds, signed artifacts, SBOM, provenance, reproducible release process, release channels and rollback evidence |
 | Governance | Security and contribution guidance exists | Approved license, trademark policy, contributor terms, vulnerability reporting, support policy and release-key custody |
+
+## Additional target capabilities documented on 2026-11-28
+
+The complete platform target now includes:
+- private installation-owned identity provider and OIDC/OAuth issuer;
+- operator Console, Identity portal and UI toolkit/Studio;
+- bring-your-own-provider connection registry and credential vault;
+- Cloudflare, Firebase, Supabase and generic REST/webhook adapters;
+- explicit provider scopes, resource bindings, project grants and deploy approvals;
+- brand system and per-installation organization branding.
+
+These are **documented only** at this revision. They are not implemented production services. The current provider adapters and Cloudflare Worker remain experimental/preview. See [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md), [Bring-your-own-infrastructure provider architecture](BYI_PROVIDER_CONNECTIONS.md), and [Brand and product identity](BRAND_AND_PRODUCT_IDENTITY.md).
 
 ## Decisions to preserve
 
@@ -174,5 +186,5 @@ The filesystem/config lifecycle and SQLite adapter remain experimental. Configur
 - No new kernel, Linux distribution or container runtime.
 - No Otya programming language, .ot source format, compiler or VM.
 - No Otya-hosted compute, mandatory account, central database or control plane.
-- No engine-owned company/customer/tenant/end-user directory.
+- No global or cross-installation company/customer/tenant/user directory. Each installation may own its local operator identity realm and user/group directory.
 - No claim of production readiness based on documents or a successful compile alone.
