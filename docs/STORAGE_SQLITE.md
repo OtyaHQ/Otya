@@ -89,3 +89,9 @@ This crate is a tested engineering foundation, not a production-ready storage la
 - CLI database initialization, migration or backup commands.
 
 Do not place production or irreplaceable data in this experimental branch. Do not copy a live WAL database as a casual backup; consistent online backup and tested restore are separate future work.
+
+## Verification status
+
+The current Linux adapter code and tests passed Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437) on commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`. The run passed stable formatting, Clippy, workspace tests, CLI smoke tests, example config validation, release build and Rust 1.85 workspace compile/tests. Coverage includes fresh database initialization, Otya identity, WAL, integrity check, reopen, read-only file permission hardening, refusal/preservation of unrelated SQLite databases, symlink refusal and transaction rollback.
+
+This evidence is for the GitHub-hosted Linux runner and the system SQLite version present there. It is not a release guarantee for every Linux distribution, SQLite build or filesystem. The incomplete items above remain release blockers.
