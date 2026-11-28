@@ -54,6 +54,7 @@ The filesystem/config lifecycle and SQLite adapter remain experimental. Configur
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
+| Headless cloud runtime | Minimal Rust/WebAssembly Cloudflare Worker and manual deployment workflow are implemented; CI check and first preview are pending | Worker host/API integration tests, async storage/operation contract, D1/Queues/Workflows/Durable Objects adapters, Container/OCI profile, deployment and recovery acceptance |
 | Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions, v1-to-v2 migration and CLI init/check smoke flow are CI-verified on run 265 | Adapter conformance across multiple backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
@@ -64,8 +65,8 @@ The filesystem/config lifecycle and SQLite adapter remain experimental. Configur
 | Module and extension system | Design documented | Registry, dependency/version resolution, signatures, safe disable/uninstall and isolated third-party process runtime |
 | Python SDK | Design documented | Versioned FFI contract, optional Python package, supported Python matrix and lifecycle/memory tests |
 | Flutter/Dart SDK | Design documented | C ABI, Dart FFI binding, native packaging and handle/lifetime/error tests |
-| Phone-first development | Codespaces devcontainer, phone-first guide and Android/WASM target workflow added; portability CI passed; Codespaces first launch still needs validation | Codespace first-launch validation, supported phone/browser checks, remote artifact workflow and no-PC Android app delivery |
-| Mobile runtime | Portable core Android/WASM compile checks pass; no mobile app released | Stable C ABI, Android platform adapter, APK build/signing, Kotlin/JNI and Dart FFI, lifecycle/offline tests and later iOS adapter |
+| Phone-first development | Codespaces devcontainer, phone-first guide, GitHub Actions CI and a manual Cloudflare deployment workflow are committed; current phone/browser experience still needs manual validation | Codespace first-launch validation on a real phone, workflow_dispatch test after merge, protected production approval and remote artifact retention |
+| Mobile runtime | Headless product boundary defined; Android/WASM target checks are compile-compatibility checks only; no Otya mobile app or APK is intended | Versioned HTTPS API/authentication, optional host-app SDK only if needed, and remote-client lifecycle/offline tests; standalone APK work is explicitly out of scope |
 | Cross-platform support | Linux-first strategy documented | Verified Linux distro/libc matrix first; Windows and macOS implementations only after platform abstraction tests |
 | Observability | Design documented | Structured logs, rotation, health/readiness, metrics, traces, correlation and redacted support bundle |
 | Performance | Release profile configured; no benchmark baseline | Startup, idle memory, binary size, throughput, latency, concurrency and soak benchmarks with named reference hardware |
@@ -80,7 +81,7 @@ The filesystem/config lifecycle and SQLite adapter remain experimental. Configur
 4. **Business identity:** engine core never becomes a customer directory, Otya login system, tenant router or company registry. Host applications authorize their own users.
 5. **Extension trust:** trusted first-party modules may be compiled Rust crates. Third-party/untrusted modules must not be loaded as arbitrary native libraries into the core process.
 6. **Portability order:** Linux x86_64 and aarch64 first. A platform is supported only after build, install, update, service, storage and recovery tests pass.
-7. **Language support:** Rust core first; Python and Flutter/Dart are optional client bindings. No Otya language/compiler or embedded Python runtime in this repository.
+7. **Runtime support:** headless Rust core first; Linux native and Cloudflare Worker host adapters are separate. Python and Flutter/Dart are optional host-application SDKs only. No standalone Otya mobile app, Otya language/compiler or embedded Python runtime is part of this repository.
 
 ## Recommended implementation order
 
