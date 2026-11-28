@@ -4,7 +4,7 @@
 
 A business module owns domain meaning, authorization and invariants. An adapter translates a stable engine contract to an external system. The engine core owns lifecycle, local capabilities, common reliability, diagnostics and version negotiation.
 
-The core is single-operator and tenant-unaware. It does not create company/customer records, tenant IDs or end-user accounts. A host application owns those identities and passes only the minimum scoped operation context needed by a module.
+The Engine is single-operator per installation, not cross-operator multi-tenant. The full distribution may include an installation-owned identity provider and local user/group directory. Those identities and keys never cross installation boundaries. Host applications may use that issuer for sign-in but retain product-specific authorization and business identity.
 
 Do not put provider-specific SDK calls throughout business modules.
 
@@ -19,10 +19,11 @@ The experimental `otya-engine-sdk` currently provides an in-process application 
 ## Module classes
 
 1. **Core modules:** lifecycle, configuration, authorization hooks, audit, operation state and health.
-2. **Business modules:** accounting, organization/staff, inventory, retail, commerce, communications and other separately versioned domains.
-3. **Infrastructure adapters:** SQLite/PostgreSQL, local filesystem, object storage, secret stores and network transports.
-4. **Provider adapters:** Cloudflare, GitHub, Resend, Firebase, SMTP, generic REST and signed webhooks.
-5. **Host bindings:** C ABI, Flutter/Dart and Python wrappers.
+2. **Platform modules:** installation-owned identity/OIDC, access policy primitives, management console, UI kit, workspace/project registry and module catalog.
+3. **Business modules:** accounting, organization/staff, inventory, retail, commerce, communications and other separately versioned domains.
+4. **Infrastructure adapters:** SQLite/PostgreSQL, local filesystem, object storage, secret stores and network transports.
+5. **Provider adapters:** Cloudflare, GitHub, Resend, Firebase, SMTP, generic REST and signed webhooks.
+6. **Host bindings:** C ABI, Flutter/Dart and Python wrappers.
 
 ## Module contract
 
