@@ -550,8 +550,7 @@ mod tests {
 
         let root = temporary_root("prepare-file-nofollow");
         let data_dir = root.join("data");
-        ensure_private_directory("data", &data_dir)
-            .expect("data directory should be prepared");
+        ensure_private_directory("data", &data_dir).expect("data directory should be prepared");
         let target = root.join("outside.db");
         fs::write(&target, b"target").expect("target should be written");
         symlink(&target, data_dir.join("linked.db")).expect("symlink should be created");
