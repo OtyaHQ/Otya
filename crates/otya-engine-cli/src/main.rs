@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{DiagnosticSeverity, discover_engine_paths, parse_config};
+use otya_engine_core::{DiagnosticSeverity, discover_engine_paths_for, parse_config};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -39,6 +39,9 @@ enum Command {
         /// Explicitly create private directories and enforce owner-only permissions.
         #[arg(long)]
         create: bool,
+        /// Use a separate local installation namespace (1-48 lowercase letters, digits, underscores or hyphens).
+        #[arg(long, value_name = "NAME")]
+        instance: Option<String>,
     },
     /// Validate operator-owned engine configuration.
     Config {
@@ -99,7 +102,11 @@ fn run(cli: Cli) -> Result<(), String> {
                 }
             }
         }
-        Command::Paths { json, create } => show_paths(json, create)?,
+        Command::Paths {
+            json,
+            create,
+            instance,
+        } => show_paths(json, create, instance.as_deref())?,
         Command::Config { command } => match command {
             ConfigCommand::Validate { file, json } => validate_config(&file, json)?,
         },
@@ -153,8 +160,8 @@ fn doctor_report() -> DoctorReport {
     }
 }
 
-fn show_paths(json: bool, create: bool) -> Result<(), String> {
-    let paths = discover_engine_paths().map_err(|error| error.to_string())?;
+fn show_paths(json: bool, create: bool, instance: Option<&str>) -> Result<(), String> {
+    let paths = discover_engine_paths_for(instance).map_err(|error| error.to_string())?;
     let prepared = if create {
         #[cfg(target_os = "linux")]
         {
@@ -198,6 +205,10 @@ fn show_paths(json: bool, create: bool) -> Result<(), String> {
     }
 
     println!("Otya Engine paths for the current operator");
+    println!(
+        "instance: {}",
+        paths.instance.as_deref().unwrap_or("default")
+    );
     println!("config:  {}", paths.config_dir.display());
     println!("data:    {}", paths.data_dir.display());
     println!("state:   {}", paths.state_dir.display());
