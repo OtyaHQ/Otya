@@ -36,7 +36,7 @@
 
 ## Latest provider-contract CI state
 
-At branch head `368588ef52725c9a6edc48cc018331296b57d5a9`, the Rust quality job has passed formatting, Clippy, workspace tests, CLI diagnostics, SQLite smoke tests and example configuration validation. The release-binary build was still running at the last inspection. The minimum-Rust-version build and Android/WebAssembly/Cloudflare portability workflow were also still in progress. See [Otya Engine CI run 46159074134](https://github.com/OtyaHQ/Otya/actions/runs/46159074134) and [portable targets run 46159074138](https://github.com/OtyaHQ/Otya/actions/runs/46159074138). Do not mark the new provider code fully CI-verified until both workflows complete successfully.
+At branch head `368588ef52725c9a6edc48cc018331296b57d5a9`, Otya Engine CI [run 46159074134](https://github.com/OtyaHQ/Otya/actions/runs/46159074134) **passed**: rustfmt, Clippy, workspace tests, CLI diagnostics, SQLite smoke tests, example configuration validation, release build and Rust 1.85 minimum-version compile/tests. The portability workflow [run 46159074138](https://github.com/OtyaHQ/Otya/actions/runs/46159074138) has passed Android arm64, armv7, x86_64 and WebAssembly portable-core compilation; the separate Cloudflare Worker packaging/deploy-profile check is still in progress. The new metadata contracts are CI-verified by the core workflow, but they are not a persistent provider registry, vault or live connector.
 
 ## CI evidence
 
