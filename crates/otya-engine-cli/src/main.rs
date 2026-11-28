@@ -1,7 +1,7 @@
 use std::{
     fs,
+    path::{Path, PathBuf},
     process::ExitCode,
-    path::PathBuf,
 };
 
 use clap::{Parser, Subcommand};
@@ -23,7 +23,7 @@ struct Cli {
 enum Command {
     /// Print engine version and build information.
     Version,
-    /// Inspect local host compatibility without contacting external services.
+    /// Inspect local host information without contacting external services.
     Doctor {
         /// Print machine-readable JSON.
         #[arg(long)]
@@ -80,7 +80,7 @@ fn run(cli: Cli) -> Result<(), String> {
                 println!("network: not used by this diagnostic");
                 println!("result: {}", report.result);
                 for check in report.checks {
-                    println!("- {}: {}", check.name, check.detail);
+                    println!("- {} [{}]: {}", check.name, check.status, check.detail);
                 }
             }
         }
@@ -93,6 +93,7 @@ fn run(cli: Cli) -> Result<(), String> {
 
 #[derive(serde::Serialize)]
 struct DoctorReport {
+    /// Diagnostic execution status, not a certification that the host is production-ready.
     result: &'static str,
     checks: Vec<DoctorCheck>,
 }
@@ -100,35 +101,39 @@ struct DoctorReport {
 #[derive(serde::Serialize)]
 struct DoctorCheck {
     name: &'static str,
+    status: &'static str,
     detail: String,
 }
 
 fn doctor_report() -> DoctorReport {
     DoctorReport {
-        result: "ok",
+        result: "diagnostic_completed",
         checks: vec![
             DoctorCheck {
                 name: "execution_mode",
+                status: "informational",
                 detail: "Local-only diagnostics; no provider or Otya service contacted.".to_owned(),
             },
             DoctorCheck {
                 name: "host",
+                status: "detected",
                 detail: format!("{} / {}", std::env::consts::OS, std::env::consts::ARCH),
             },
             DoctorCheck {
                 name: "service",
+                status: "not_implemented",
                 detail: "The optional local service is not part of this initial CLI milestone.".to_owned(),
             },
         ],
     }
 }
 
-fn validate_config(file: &PathBuf, json: bool) -> Result<(), String> {
+fn validate_config(file: &Path, json: bool) -> Result<(), String> {
     let source = fs::read_to_string(file)
         .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
 
-    let config = parse_config(&source)
-        .map_err(|error| format!("{}: {error}", file.display()))?;
+    let config =
+        parse_config(&source).map_err(|error| format!("{}: {error}", file.display()))?;
     let report = config.validate();
 
     if json {
