@@ -72,4 +72,7 @@ pub trait StorageTransaction {
 
     /// Atomically commit all changes in this transaction.
     fn commit(self: Box<Self>) -> Result<(), StorageError>;
+
+    /// Explicitly roll back all changes in this transaction.
+    fn rollback(self: Box<Self>) -> Result<(), StorageError>;
 }
