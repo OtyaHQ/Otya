@@ -9,8 +9,8 @@
 mod config;
 
 pub use config::{
-    ConfigDiagnostic, ConfigError, DiagnosticSeverity, EngineConfig, InstanceConfig, InstanceMode,
-    StorageConfig, ValidationReport, parse_config,
+    ConfigDiagnostic, ConfigError, DiagnosticSeverity, EngineConfig, EngineRuntimeConfig,
+    ExecutionMode, StorageConfig, ValidationReport, parse_config,
 };
 
 /// Version of the configuration schema understood by this core release.
