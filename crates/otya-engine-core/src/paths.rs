@@ -1,4 +1,7 @@
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
+
+#[cfg(target_os = "linux")]
+use std::env;
 
 use serde::Serialize;
 use thiserror::Error;
@@ -28,16 +31,16 @@ pub struct PathDiagnostic {
 pub enum PathResolutionError {
     #[error("HOME is not set to an absolute directory")]
     HomeUnavailable,
-    #[error("XDG path discovery is not implemented for this operating system")]
+    #[error("path discovery is currently implemented only for Linux")]
     UnsupportedPlatform,
 }
 
-/// Discover XDG paths for the current Unix operator.
+/// Discover XDG paths for the current Linux operator.
 ///
 /// Relative XDG environment overrides are ignored, as required by the XDG
 /// Base Directory Specification. No filesystem changes are performed.
 pub fn discover_engine_paths() -> Result<EnginePaths, PathResolutionError> {
-    #[cfg(unix)]
+    #[cfg(target_os = "linux")]
     {
         let home = env::var_os("HOME").map(PathBuf::from);
         let config = env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
@@ -49,12 +52,13 @@ pub fn discover_engine_paths() -> Result<EnginePaths, PathResolutionError> {
         resolve_from_values(home, config, data, state, cache, runtime)
     }
 
-    #[cfg(not(unix))]
+    #[cfg(not(target_os = "linux"))]
     {
         Err(PathResolutionError::UnsupportedPlatform)
     }
 }
 
+#[cfg(target_os = "linux")]
 fn resolve_from_values(
     home: Option<PathBuf>,
     config: Option<PathBuf>,
@@ -122,6 +126,7 @@ fn resolve_from_values(
     })
 }
 
+#[cfg(target_os = "linux")]
 fn resolve_override(
     variable: &'static str,
     value: Option<PathBuf>,
@@ -143,7 +148,7 @@ fn resolve_override(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
 
@@ -202,9 +207,9 @@ mod tests {
         let paths = resolve_from_values(
             Some(PathBuf::from("/home/operator")),
             Some(PathBuf::from("relative-config")),
-            None,
-            None,
-            None,
+            Some(PathBuf::from("relative-data")),
+            Some(PathBuf::from("relative-state")),
+            Some(PathBuf::from("relative-cache")),
             Some(PathBuf::from("relative-runtime")),
         )
         .expect("valid HOME should resolve");
@@ -213,11 +218,27 @@ mod tests {
             paths.config_dir,
             PathBuf::from("/home/operator/.config/otya-engine")
         );
+        assert_eq!(
+            paths.data_dir,
+            PathBuf::from("/home/operator/.local/share/otya-engine")
+        );
+        assert_eq!(
+            paths.state_dir,
+            PathBuf::from("/home/operator/.local/state/otya-engine")
+        );
+        assert_eq!(
+            paths.cache_dir,
+            PathBuf::from("/home/operator/.cache/otya-engine")
+        );
         assert_eq!(paths.runtime_dir, None);
-        assert!(paths
-            .diagnostics
-            .iter()
-            .any(|item| item.code == "paths.invalid_xdg_override"));
+        assert_eq!(
+            paths
+                .diagnostics
+                .iter()
+                .filter(|item| item.code == "paths.invalid_xdg_override")
+                .count(),
+            4
+        );
         assert!(paths
             .diagnostics
             .iter()
