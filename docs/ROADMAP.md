@@ -30,6 +30,8 @@ Deliverables:
 - CLI for version, doctor, paths and config validation; status, logs and self-test remain future work.
 - Linux x86_64 and aarch64 build targets.
 - OS-neutral core contracts and isolated platform-specific code.
+- Phone-first developer environment using a repository Codespaces devcontainer and remote GitHub Actions.
+- Initial Android and WebAssembly compile-compatibility checks for the portable core; no APK or Worker runtime is implied.
 
 Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; no secrets emitted in logs; all reported support targets are actually tested.
 
@@ -123,18 +125,22 @@ Prioritized modules:
 
 Exit gate: each module has typed domain models, migrations, host-authorized operations, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
 
-## E8 — SDKs and application integrations
+## E8 — SDKs and mobile application integrations
 
-**Goal:** let apps embed or connect to the same engine.
+**Goal:** let applications embed or connect to the same portable engine, including phone applications.
 
 Deliverables:
-- Stable Rust SDK.
-- Versioned C ABI and Flutter/Dart FFI wrapper.
+- Stable Rust SDK and versioned C ABI with opaque handles and explicit ownership.
+- Android platform adapter for app-private paths, secrets, lifecycle and background work.
+- Kotlin/JNI bridge and Flutter/Dart FFI package using the same versioned ABI.
+- Android SQLite/storage adapter separate from Linux filesystem code.
+- Android arm64 NDK builds, reproducible package assembly and instrumented lifecycle/network/upgrade tests.
 - Python bindings distributed as a separate optional package.
-- Local IPC client library.
+- Local IPC client library for supported desktop/server hosts.
+- iOS platform adapter and Swift/Objective-C bridge after Android's contracts are proven.
 - Version compatibility matrix and sample integrations.
 
-Exit gate: wrappers pass lifecycle, concurrency, error mapping, memory ownership and compatibility tests. Python is not required to install or run the Rust engine.
+Exit gate: wrappers pass lifecycle, concurrency, error mapping, memory ownership and compatibility tests; Android packages are signed and tested on supported OS versions. Python is not required to install or run the Rust engine. Android target compilation alone does not meet this gate.
 
 ## E9 — Extension system and mature distribution
 
