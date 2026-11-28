@@ -354,6 +354,78 @@ mod tests {
     }
 
     #[test]
+    fn creates_private_file_with_owner_only_permissions() {
+        if geteuid().is_root() {
+            return;
+        }
+
+        let root = temporary_root("private-file");
+        let config_dir = root.join("config");
+        ensure_private_directory("configuration", &config_dir)
+            .expect("config directory should be prepared");
+
+        let file = create_private_file(&config_dir, "otya-engine.toml", b"schema_version = 1\n")
+            .expect("private config file should be created");
+        assert_eq!(fs::read(&file).expect("file should be readable"), b"schema_version = 1\n");
+        assert_eq!(
+            fs::metadata(&file)
+                .expect("file metadata should be available")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+    }
+
+    #[test]
+    fn refuses_to_overwrite_existing_file_or_follow_existing_symlink() {
+        if geteuid().is_root() {
+            return;
+        }
+
+        let root = temporary_root("no-overwrite");
+        let config_dir = root.join("config");
+        ensure_private_directory("configuration", &config_dir)
+            .expect("config directory should be prepared");
+        let existing = config_dir.join("otya-engine.toml");
+        fs::write(&existing, b"operator data").expect("existing file should be created");
+
+        assert!(matches!(
+            create_private_file(&config_dir, "otya-engine.toml", b"new content"),
+            Err(SecureFsError::FileAlreadyExists(_))
+        ));
+        assert_eq!(fs::read(&existing).expect("existing file should remain"), b"operator data");
+
+        let target = root.join("outside-target");
+        fs::write(&target, b"target data").expect("target should be created");
+        let link = config_dir.join("linked.toml");
+        symlink(&target, &link).expect("symlink should be created");
+        assert!(matches!(
+            create_private_file(&config_dir, "linked.toml", b"replacement"),
+            Err(SecureFsError::FileAlreadyExists(_))
+        ));
+        assert_eq!(fs::read(&target).expect("target should remain"), b"target data");
+    }
+
+    #[test]
+    fn rejects_file_names_that_are_not_single_components() {
+        if geteuid().is_root() {
+            return;
+        }
+
+        let root = temporary_root("invalid-file-name");
+        let config_dir = root.join("config");
+        ensure_private_directory("configuration", &config_dir)
+            .expect("config directory should be prepared");
+        for invalid in ["", ".", "..", "../outside.toml", "sub/config.toml", "/tmp/file"] {
+            assert!(matches!(
+                create_private_file(&config_dir, invalid, b"content"),
+                Err(SecureFsError::InvalidFileName(_))
+            ));
+        }
+    }
+
+    #[test]
     fn creates_private_nested_directories_and_is_idempotent() {
         if geteuid().is_root() {
             return;
