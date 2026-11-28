@@ -26,7 +26,7 @@ Do not make the portable core depend on Linux paths, a database server, a Cloudf
 | Generic OCI container | Docker/Podman-compatible Linux host or cloud container service | Full Linux userspace on a VPS, VM, container host or orchestrator | Persist data in mounted operator-managed volumes or external databases; do not assume container-local disk survives replacement |
 | Other serverless runtimes | Provider-specific adapter built around the same contracts | Stateless request handlers and provider-supported background events | Add only after the target runtime's APIs, limits, retries and storage semantics are tested |
 
-The first Cloudflare Rust Worker project lives in platforms/cloudflare-worker/. It is a minimal headless host adapter and currently exposes only /health and /version. The adapter is compile-checked separately from the main workspace.
+The first Cloudflare Rust Worker project lives in platforms/cloudflare-worker/. It now exposes /health and /version, serves a responsive example website from Workers Static Assets, and routes /api/v1/catalog/* to the example catalog application through the application SDK. The Worker is compile-checked separately from the main workspace. Its sample API is public, read-only and backed by static fixtures only; no production authentication or durable storage is wired yet.
 
 The Cloudflare Worker crate is isolated in its own Cargo workspace because workers-rs 0.8.7 requires Rust 1.91. The portable engine core retains its Rust 1.85 minimum. This avoids making every native/embedded Otya consumer install a newer toolchain or depend on Cloudflare libraries.
 
@@ -113,11 +113,15 @@ A Rust core compiling to WebAssembly does not mean the Linux CLI or SQLite crate
 Implemented in this branch:
 - portable Rust core with Android and WebAssembly compile checks;
 - Linux CLI and optional local SQLite adapter;
-- a separate headless Cloudflare Rust Worker entrypoint with health/version handlers;
+- an initial application SDK with manifests, exact routes, public/authenticated policy and capability checks;
+- a stateless example catalog application and route tests;
+- a Cloudflare Worker serving a responsive example website and routing API calls to the example app;
 - a manual, phone-triggerable GitHub Actions deployment workflow requiring operator-owned Cloudflare secrets.
 
 Still incomplete:
-- Cloudflare Worker runtime integration tests and a successful first deployed preview;
+- Worker browser/runtime end-to-end tests and a successful first deployed preview;
+- real authentication and host authorization adapter; the current sample routes are public/read-only;
+- async application handlers, request-body forwarding and general HTTPS host adapter;
 - D1/Queues/Workflows/Durable Objects storage and operation adapters;
 - generic asynchronous storage/operation contracts;
 - Cloudflare Container runtime profile and generic OCI packaging;
