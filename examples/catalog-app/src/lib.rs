@@ -89,3 +89,50 @@ impl Application for CatalogApplication {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use otya_engine_sdk::{ApplicationRegistry, ApplicationRequest, CallerContext};
+
+    fn registry() -> ApplicationRegistry {
+        let mut registry = ApplicationRegistry::new();
+        registry
+            .register(CatalogApplication)
+            .expect("catalog application should register");
+        registry
+    }
+
+    #[test]
+    fn catalog_endpoint_returns_the_sample_items() {
+        let response = registry().dispatch(ApplicationRequest::new(
+            HttpMethod::Get,
+            "/api/v1/catalog/items",
+            Vec::new(),
+            CallerContext::anonymous(),
+        ));
+
+        assert_eq!(response.status(), 200);
+        let value: serde_json::Value =
+            serde_json::from_slice(response.body()).expect("catalog response should be JSON");
+        assert_eq!(value["demo_only"], true);
+        assert_eq!(value["items"].as_array().map(Vec::len), Some(3));
+    }
+
+    #[test]
+    fn about_endpoint_explains_the_application_boundary() {
+        let response = registry().dispatch(ApplicationRequest::new(
+            HttpMethod::Get,
+            "/api/v1/catalog/about",
+            Vec::new(),
+            CallerContext::anonymous(),
+        ));
+
+        assert_eq!(response.status(), 200);
+        let value: serde_json::Value =
+            serde_json::from_slice(response.body()).expect("about response should be JSON");
+        assert_eq!(value["powered_by"], "Otya Engine SDK");
+        assert!(value["persistence"].as_str().is_some());
+    }
+}
