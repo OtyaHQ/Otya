@@ -5,7 +5,7 @@
 ## Implemented in the engine-only branch
 
 - Repository scope set to Otya Engine only; old language/compiler scope removed from the active branch.
-- Rust workspace with core and CLI crates.
+- Rust workspace with core, CLI and separate optional Linux SQLite adapter crates.
 - Strict TOML configuration parser and semantic validation.
 - Configuration has no company, tenant, customer or end-user identity fields; unknown identity fields are rejected.
 - Local CLI commands: `otya version`, `otya doctor`, `otya paths`, `otya config init`, and `otya config validate`.
@@ -18,20 +18,28 @@
 - Read-only `otya paths` inspection does not create or modify files.
 - Linux `otya config init` prepares only the config directory and exclusively creates `otya-engine.toml` with mode 0600; it refuses existing files and does not follow symlinked parents.
 - The starter config selects embedded mode with memory storage and emits a volatility warning.
-- A separate Linux-only `otya-engine-storage-sqlite` crate provides an initial optional SQLite foundation: owner-only database-file creation/opening, no-follow checks, Otya application/schema metadata, exclusive first metadata transaction, WAL mode, bounded busy timeout, explicit rollback-safe transactions and SQLite integrity checks. It is not a generic storage contract or complete migration/backup system.
+- The core exports a backend-neutral storage/transaction contract with bounded namespace, key, value and prefix-scan limits.
+- The separate Linux SQLite adapter implements that contract using private operator-owned files, no-follow checks, Otya database identity metadata, schema v1-to-v2 migration, WAL, bounded busy timeout and rollback-safe transactions.
+- CLI `otya storage init --config FILE` explicitly initializes the SQLite database; `otya storage check --config FILE` checks an existing database without creating a missing one or running a migration.
+- A phone-accessible Codespaces devcontainer provides a remote Rust environment with SQLite build dependencies and Android/WebAssembly Rust targets.
+- A separate mobile portability workflow compiles the platform-neutral core for Android and WebAssembly; it does not yet build an APK, FFI bridge or mobile app.
+- Phone-first and mobile-runtime architecture guides distinguish remote development from actual mobile runtime support.
 - Local commands do not make network calls.
 - Comprehensive engine gap audit and staged implementation plan documented.
 - Obsolete .ot language example removed from the active engine branch.
 
 ## CI evidence
 
+- The prior Linux/SQLite baseline is verified in Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), but it predates the current generic storage contract and CLI storage wiring.
+- Android and WebAssembly portable-core compile checks passed in Otya Mobile and Web Portability [run 10](https://github.com/OtyaHQ/Otya/actions/runs/46143442905).
+- The current storage integration and CLI smoke tests are still awaiting a successful full Rust quality run on the latest branch head.
 - Configuration initializer was verified in Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062); it is also included in the latest full run.
 - Latest full branch verification: Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`.
 - Stable Rust quality job: **passed** — rustfmt, Clippy, all workspace tests (including SQLite initialisation, WAL, schema identity, reopen, permission hardening, foreign-database preservation and transaction rollback), CLI smoke tests, generated/example configuration validation and release build.
 - Rust 1.85 minimum-version job: **passed** — workspace compile and tests for the full workspace, including the optional SQLite crate.
 - The SQLite adapter uses the host system SQLite library. CI installs `libsqlite3-dev` and `pkg-config`; it does not enable the bundled SQLite feature.
 
-This verifies the Linux path resolver, private configuration/database file handling and initial SQLite transaction foundation on a GitHub-hosted Linux runner. It does not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, the complete storage abstraction, full schema migration lifecycle, online backup/restore, crash recovery, the future service daemon, provider APIs or production readiness.
+Run 193 verifies only the Linux path resolver, private configuration/database file handling and the initial SQLite transaction foundation on a GitHub-hosted Linux runner. The newer storage contract/CLI is pending fresh verification. The Android/WebAssembly portable-core compile checks passed on GitHub-hosted runners, but no Android FFI/app package is built. No broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, full migration lifecycle, online backup/restore, crash recovery, future service daemon, provider APIs or production readiness is claimed.
 
 ## Not yet implemented
 
@@ -39,7 +47,7 @@ This verifies the Linux path resolver, private configuration/database file handl
 - Crash/power-loss-safe temporary-file replacement for configuration; a process interruption during first creation may leave an incomplete file that must be inspected before retrying.
 - Arbitrary operator-selected root paths beyond XDG overrides and validated local instance names.
 - Free-space and filesystem-capacity diagnostics.
-- Full SQLite storage contract, module tables, general schema migration runner, online backup/restore and crash-recovery support.
+- General SQLite migration runner beyond the initial v1-to-v2 schema upgrade, module-owned tables, online backup/restore, multi-process stress and crash-recovery support.
 - PostgreSQL adapter.
 - Per-user service and authenticated local IPC.
 - Linux installer, package signatures and service hardening.
@@ -48,7 +56,9 @@ This verifies the Linux path resolver, private configuration/database file handl
 - Durable job queue, scheduler, outbox, inbox and webhook verification.
 - Backup, restore, migrations and crash recovery.
 - Business modules and host-application authorization integration.
-- Stable C ABI, Flutter/Dart and Python bindings.
+- Stable C ABI, Android/Kotlin/JNI, Flutter/Dart and Python bindings; no mobile packages are released yet.
+- Android platform storage/secrets/background-work adapter, Android NDK APK pipeline and iOS platform adapter.
+- Codespaces devcontainer first-launch validation and latest storage CI result.
 - Cross-platform installers, signed release artifacts, SBOM and build provenance.
 
 ## Release status
