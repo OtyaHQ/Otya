@@ -10,7 +10,7 @@ This is a supported development workflow design. It does not mean every editor, 
 
 Open the repository on GitHub in the phone browser.
 
-For lightweight edits, open the repository in [github.dev](https://github.dev). GitHub's web editor can browse and edit the repository and commit source changes without installing a local development toolchain. It has no terminal or build VM, so it cannot run Cargo, tests, Android builds or the local Cloudflare development server. Work is stored in browser-local state until it is committed; commit regularly so changes are not trapped in one browser session.
+For lightweight edits, open the repository in [github.dev](https://github.dev). GitHub's web editor can browse and edit the repository and commit source changes without installing a local development toolchain. It has no terminal or build VM, so it cannot run Cargo, tests, or the local Cloudflare development server. Work is stored in browser-local state until it is committed; commit regularly so changes are not trapped in one browser session.
 
 For the full development environment, create or resume a GitHub Codespace from the repository's **Code → Codespaces** menu. Open the Codespace in the browser editor. The Codespace is a cloud VM with a terminal and the repository's `.devcontainer` environment.
 
@@ -49,13 +49,23 @@ The phone may be switched off after the change is pushed: GitHub Actions continu
 
 ### 3. Deploy through the operator's cloud account
 
-Cloudflare remains an optional host and provider, not a required Otya Engine control plane.
+Cloudflare is an optional host, not an Otya control plane. The first Rust Worker profile is built on GitHub-hosted runners because the documented default Workers Builds image lists Node.js, Python, PHP, Ruby and Go but does not list Rust. Do not assume the default Cloudflare build image contains a Rust toolchain.
 
-For a Cloudflare Worker project, an operator can connect its GitHub repository through **Workers Builds**. Cloudflare can build pushes to the chosen production branch and create branch/PR Previews. Keep `main` as the production branch; feature branches and pull requests should use previews.
+The repository includes a manual GitHub Actions workflow at .github/workflows/cloudflare-worker-deploy.yml. It:
+- installs the Rust 1.91 toolchain and WebAssembly target needed by workers-rs 0.8.7;
+- builds the headless Worker using worker-build;
+- deploys either an isolated preview Worker or the production Worker;
+- allows production deployment only from main.
+
+To enable it, the operator stores CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in GitHub Actions secrets or protected GitHub Environments. The workflow does not include credentials in source control and does not deploy automatically on every push. The workflow file must first be merged into the repository's default branch before it is available for manual workflow_dispatch from the Actions UI.
+
+From a phone, open the repository's Actions tab, select Deploy Otya Cloudflare Worker, choose preview or production, and run the workflow. Production should additionally use a protected GitHub Environment with approval rules. Preview uses a separate Worker name; the current sample exposes only public, non-sensitive health/version endpoints.
+
+For TypeScript/JavaScript Workers, Cloudflare Workers Builds can connect a GitHub repository and build/deploy pushes. For this Rust Worker, use the checked-in GitHub Actions pipeline unless a Rust-capable Workers build image is deliberately configured and tested.
 
 Use one deployment owner per Worker:
-- **Workers Builds** when Cloudflare should own the Git-connected build and deploy for that Worker; or
-- **GitHub Actions** when the project needs one external pipeline to build and deploy multiple artifact types or providers.
+- GitHub Actions for the current Rust Worker, because it installs and pins the Rust/WASM toolchain;
+- Workers Builds for a separate TypeScript/JavaScript Worker when Cloudflare should own that Worker’s Git-connected build/deploy.
 
 Do not configure both systems to automatically deploy the same Worker from the same production branch. That creates competing deployments and makes release ownership unclear.
 
@@ -66,7 +76,7 @@ For preview safety:
 - protect preview URLs with Cloudflare Access when they contain non-public application data; preview URLs are public by default;
 - do not allow tests or preview jobs to mutate production databases, buckets, queues or live accounts.
 
-Cloudflare Previews have specific product limitations: some resources are shared unless separately bound, and certain routes, cron triggers, queue consumers and workflow bindings may still use production resources. Check the current resource-isolation matrix before enabling each binding.
+Cloudflare preview deployments have resource-isolation limitations. Check the current resource-isolation matrix before enabling each binding.
 
 ## Secrets and account security
 
@@ -89,12 +99,17 @@ A phone browser is a control surface, not a place to store deployment credential
 | Run formatting, Clippy and CI | GitHub Actions | GitHub-hosted runner |
 | Compile the portable core for Android/WASM | Mobile portability workflow | GitHub-hosted runner |
 | Review pull requests and logs | GitHub website | Phone browser |
-| Build and preview a Cloudflare Worker | Workers Builds / Previews | Cloudflare build infrastructure |
-| Use an Otya-powered mobile app | Installed Android app or responsive web app | Phone |
-| Build/publish an Android app | Future protected mobile release workflow | Remote Android build runner |
+| Deploy the Rust Cloudflare Worker | GitHub Actions workflow_dispatch | GitHub-hosted Rust/WASM runner and Cloudflare account |
+| Use an Otya-powered product on a phone | Host application's responsive website or existing mobile client calling Otya HTTPS APIs | Phone browser / host app |
+| Operate the headless engine | GitHub Actions and the operator's cloud dashboard | Remote CI/cloud runtime |
 
 ## Product boundary
 
 The engine must not depend on GitHub, Codespaces or Cloudflare to run. They are useful developer/operator tools. A customer can instead build locally, use another Git provider, self-host CI, self-host the engine or run it offline.
 
 No Otya account, central Otya build server, mandatory telemetry or vendor heartbeat is introduced by this workflow.
+
+
+## Engine product boundary
+
+Otya Engine itself is not an APK or mobile application. Android target compilation is a compatibility check for the portable core and a possible future host-application SDK. It does not create an Android app and is not a release objective for this engine repository. User-facing phone experiences belong to the operator's host application or responsive web client.
