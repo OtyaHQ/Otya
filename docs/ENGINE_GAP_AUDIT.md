@@ -34,7 +34,7 @@ At Otya Engine CI run 115, commit `942041fa685ce1e00527e4d7011669ece324d892`, th
 - stable Rust formatting, Clippy, unit tests, CLI smoke checks, example validation and release build;
 - Rust 1.85 minimum-version compile and test pass.
 
-The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. Directory creation does not yet create or update configuration files.
+The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. Directory preparation remains separate from configuration. A preliminary `otya config init` now creates the initial configuration file exclusively; its new tests are awaiting CI verification. It does not update an existing file.
 
 ## Gap register
 
@@ -43,7 +43,7 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 | Independent installation boundary | Partially implemented; configuration, named local paths and filesystem isolation encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
 | No Otya control plane | Documented; current CLI has no remote calls | Automated network-egress tests proving local startup and embedded operation never phone home |
 | Linux directory discovery | XDG resolver and private directory preparation implemented and CI-verified | Physical distribution tests, arbitrary custom roots, free-space checks and broader install lifecycle |
-| Configuration lifecycle | Strict parsing and validation implemented | Safe create-only config generation, atomic replacement, schema migration and file-level symlink/ownership tests |
+| Configuration lifecycle | Strict parsing and validation are CI-verified; create-only initializer implemented but fresh CI verification is pending | Atomic replacement, safe backup/restore, schema migration, and crash/power-loss recovery |
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
@@ -89,8 +89,8 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 
 - Explicit install roots and override rules, including multiple isolated installs by one operator.
 - Secure directory creation with owner-only permissions.
-- Safe file creation/opening that resists symlink substitution and path traversal.
-- Atomic config writes, backups and schema migration.
+- Safe create-only file creation/opening that resists symlink substitution and path traversal (implemented; fresh CI run pending).
+- Atomic config replacement, backups and schema migration.
 - Installer preview, confirmation and recovery.
 
 **Acceptance:** repeated install is safe; wrong-owner or unsafe paths fail closed; existing user data is not overwritten.
