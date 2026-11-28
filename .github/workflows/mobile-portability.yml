@@ -82,9 +82,24 @@ jobs:
           RUSTUP_TOOLCHAIN: 1.91.0
         run: worker-build --release
 
-      - name: Validate Wrangler bundle and static asset configuration
+      - name: Validate private production and public preview Wrangler profiles
         working-directory: platforms/cloudflare-worker
-        run: npx --yes wrangler@4.169.0 deploy --dry-run --name otya-engine-ci-preview
+        run: |
+          set -euo pipefail
+          grep -q '^workers_dev = false
+      - name: Record runtime boundary
+        run: |
+          echo "This builds and validates a headless Rust Worker with static website assets."
+          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
+ wrangler.toml
+          grep -q '^workers_dev = true
+      - name: Record runtime boundary
+        run: |
+          echo "This builds and validates a headless Rust Worker with static website assets."
+          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
+ wrangler.preview.toml
+          npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.toml
+          npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.preview.toml
 
       - name: Record runtime boundary
         run: |
