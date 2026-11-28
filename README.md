@@ -43,12 +43,11 @@ All modes share the same engine core and versioned contracts.
 Otya does not provide mandatory hosted compute, cloud storage or a central database.
 
 - The host application may provide storage through a versioned storage interface.
-- An optional embedded SQLite adapter can store local durable state on the operator's device or server.
-- A customer-managed PostgreSQL adapter may be used when the operator's deployment requires concurrent access across processes or hosts.
+- SQLite and customer-managed PostgreSQL are planned as optional storage adapters; neither adapter is implemented in the current experimental branch.
 - Files can remain on the local filesystem or use an operator-selected object-storage adapter.
 - Credentials are resolved through the operator's operating-system secret store, environment/credential injection or an explicitly configured vault.
 
-A memory-only mode may be used for ephemeral tasks, but it must not be presented as durable storage. A production module that needs persistence must fail clearly when no appropriate storage adapter is configured.
+The current configuration schema recognizes memory and SQLite settings, but the engine does not yet ship a working storage adapter or transaction layer. The starter config uses memory mode only to provide a safe embedded-development profile; it does not demonstrate a complete runtime. Do not put production data into this branch or infer database support from successful config validation.
 
 ## Provider integrations
 
@@ -93,6 +92,7 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 
 - [Engine architecture](docs/ARCHITECTURE.md)
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
+- [Configuration lifecycle and safe initialization](docs/CONFIGURATION_LIFECYCLE.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
