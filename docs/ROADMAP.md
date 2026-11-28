@@ -125,23 +125,23 @@ Prioritized modules:
 
 Exit gate: each module has typed domain models, migrations, host-authorized operations, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
 
-## E8 — SDKs and mobile application integrations
+## E8 — SDKs and host-application integrations
 
-**Goal:** let applications embed or connect to the same portable engine, including phone applications.
+**Goal:** let other applications embed or call the headless engine without turning Otya itself into a mobile or desktop app.
 
 Deliverables:
-- Stable Rust SDK and versioned C ABI with opaque handles and explicit ownership.
-- Android platform adapter for app-private paths, secrets, lifecycle and background work.
-- Kotlin/JNI bridge and Flutter/Dart FFI package using the same versioned ABI.
-- Android SQLite/storage adapter separate from Linux filesystem code.
-- Android arm64 NDK builds, reproducible package assembly and instrumented lifecycle/network/upgrade tests.
+- Stable Rust SDK and versioned C ABI with opaque handles, ownership, thread and error contracts.
+- Optional C ABI, Kotlin/JNI or Flutter/Dart bindings only for host applications that need in-process embedding.
+- A versioned HTTPS API/client contract so host websites and mobile apps can call the operator's headless Otya runtime.
 - Python bindings distributed as a separate optional package.
-- Local IPC client library for supported desktop/server hosts.
-- iOS platform adapter and Swift/Objective-C bridge after Android's contracts are proven.
-- Version compatibility matrix and sample integrations.
+- Optional local IPC client library for supported desktop/server hosts.
+- Cross-target compile checks as compatibility evidence, not as proof of a complete app.
+- Version compatibility matrix and integration examples.
 
-Exit gate: wrappers pass lifecycle, concurrency, error mapping, memory ownership and compatibility tests; Android packages are signed and tested on supported OS versions. Python is not required to install or run the Rust engine. Android target compilation alone does not meet this gate.
+No standalone Otya Android/iOS app, APK or app-store product is planned in this repository. Android target checks do not imply an APK delivery pipeline. Any future host-application SDK must remain optional and must not become a requirement for the engine's headless runtime.
 
+**Exit gate:** host SDK lifecycle, compatibility, ownership and authorization tests pass; HTTP API authentication and versioning are stable; optional bindings do not introduce mandatory mobile UI or platform dependencies.
+ 
 ## E9 — Extension system and mature distribution
 
 **Goal:** support independent modules without weakening the core.
