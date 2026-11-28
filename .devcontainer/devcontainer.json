@@ -1,0 +1,20 @@
+{
+  "name": "Otya Engine — Rust cloud development",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "rustup component add rustfmt clippy && rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android wasm32-unknown-unknown && cargo test --workspace --all-targets",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "rust-analyzer.check.command": "clippy"
+      }
+    }
+  }
+}
