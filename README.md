@@ -1,5 +1,7 @@
 # Otya Engine
 
+**Your platform. Your infrastructure. Your control.**
+
 **Otya is an independently installable, customer-operated application platform and systems engine.**
 
 Otya is installed and operated independently by the person or organization choosing to run it. Each installation owns its identity realm, user directory, signing keys, workspaces, projects, service configuration, data, provider accounts and deployment credentials. It is not a shared multi-tenant service: unrelated installations do not share users, services, data or control planes, and no Otya-hosted account or remote heartbeat is required.
