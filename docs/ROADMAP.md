@@ -8,31 +8,29 @@ This is an engine-only, evidence-based roadmap. Milestones are complete only whe
 
 Deliverables:
 - Engine-only product definition and Otya/OEnd boundary.
+- One installation, one operator; no central customer or tenant control plane.
 - Embedded-library, optional local-service and CLI model.
 - Customer-operated responsibility and data ownership model.
 - Module, storage and provider adapter contracts.
+- Engineering influence register and platform portability strategy.
 - Threat model and dependency policy.
 
 Exit gate: architecture reviewed; no mandatory Otya cloud dependency; no hidden network calls; supported initial platform documented.
 
 ## E1 — Rust workspace, build and operator CLI
 
-**Goal:** build and run the smallest useful engine locally for one installing OS user.
-
-Deliverables:
-- XDG-aware Linux paths for config, data, state, cache and runtime sockets.
-- Single-operator configuration without tenant/company/end-user identity fields.
-- Per-user systemd service template with no root requirement for normal use.
-- Linux support matrix for x86_64 and aarch64.
+**Goal:** build and run the smallest useful engine locally for one installing operator.
 
 Deliverables:
 - Rust workspace with pinned stable toolchain and declared MSRV.
-- CI for fmt, Clippy, unit tests, integration tests and dependency checks.
-- `otya` operator CLI: version, doctor, config-check, status, logs and self-test.
-- Structured configuration with schema versions and safe defaults.
-- Release build for Linux x86_64 and aarch64.
+- CI for formatting, Clippy, unit tests, integration tests and dependency checks.
+- XDG-aware Linux paths for config, data, state, cache and runtime sockets.
+- Strict configuration with schema versions and no engine-level company, tenant or end-user identity fields.
+- CLI for version, doctor, config validation, status, logs and self-test.
+- Linux x86_64 and aarch64 build targets.
+- OS-neutral core contracts and isolated platform-specific code.
 
-Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; no secrets emitted in logs.
+Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; no secrets emitted in logs; all reported support targets are actually tested.
 
 ## E2 — Installation kit and lifecycle
 
@@ -41,21 +39,22 @@ Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; 
 Deliverables:
 - Signed release artifacts and checksums.
 - Install script/package with host preflight checks.
-- Dedicated unprivileged service account when service mode is selected.
-- systemd unit with hardening and configurable resource limits.
+- Per-user service profile; later optional dedicated unprivileged server-service profile.
+- systemd unit with tested hardening and configurable resource limits.
 - Start, stop, restart, status, doctor, logs and uninstall.
 - Embedded-library packaging separate from service installation.
+- Interrupted-install recovery, upgrade, rollback and uninstall.
 
 Exit gate: fresh install, interrupted-install recovery, upgrade, rollback and uninstall tested in disposable VMs; customer data preserved as documented.
 
 ## E3 — Storage and transactions
 
-**Goal:** reliable customer-controlled persistence.
+**Goal:** reliable operator-controlled persistence.
 
 Deliverables:
 - Storage and transaction traits with conformance tests.
 - Optional SQLite adapter with safe WAL/backup behavior.
-- Optional customer-managed PostgreSQL adapter.
+- Optional operator-managed PostgreSQL adapter.
 - Versioned migrations and migration preflight.
 - Idempotency store and transactional outbox/inbox.
 - Data export and import.
@@ -79,24 +78,25 @@ Exit gate: failure-injection tests prove no silent data loss, duplicate unsafe s
 
 ## E5 — Security and access control
 
-**Goal:** protect local and remote boundaries.
+**Goal:** protect local and remote boundaries without building an identity SaaS.
 
 Deliverables:
-- Operator/application/service identities.
-- Module capability grants and default-deny authorization.
+- OS-principal-aware local operator boundary and authenticated local IPC where required.
+- Module capability grants, least privilege and default-deny operation checks.
+- A narrow host-authorization context contract; the host app remains responsible for authenticating and authorizing its users.
 - Secret-provider interface and credential redaction.
 - Signed webhook verification and replay protection.
 - Key rotation hooks and encrypted backup support.
 - Dependency audit, SBOM, signing and vulnerability process.
 
-Exit gate: threat model reviewed; authorization tests cover cross-module and cross-tenant denial; security review of privileged code completed.
+Exit gate: threat model reviewed; local IPC and capability tests pass; host-authorization context cannot silently become a central user or tenant directory; privileged code receives security review.
 
 ## E6 — Provider adapter framework
 
 **Goal:** make provider connections reusable, replaceable and testable.
 
 Deliverables:
-- Shared HTTP transport, timeout, retry and rate-limit policies.
+- Shared HTTP client policy, timeout, retry and rate-limit behavior.
 - Adapter manifest and capability declarations.
 - Sandbox/test-mode contract and deterministic test fixtures.
 - Cloudflare, GitHub, Resend and Firebase adapters as separate optional packages.
@@ -118,7 +118,7 @@ Prioritized modules:
 - provider-neutral payment orchestration and reconciliation;
 - lending and workforce modules only after domain and legal review.
 
-Exit gate: each module has typed domain models, migrations, permissions, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
+Exit gate: each module has typed domain models, migrations, host-authorized operations, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
 
 ## E8 — SDKs and application integrations
 
@@ -126,12 +126,12 @@ Exit gate: each module has typed domain models, migrations, permissions, audit e
 
 Deliverables:
 - Stable Rust SDK.
-- C ABI and Flutter/Dart FFI wrapper.
-- Python bindings.
+- Versioned C ABI and Flutter/Dart FFI wrapper.
+- Python bindings distributed as a separate optional package.
 - Local IPC client library.
 - Version compatibility matrix and sample integrations.
 
-Exit gate: wrappers pass lifecycle, concurrency, error mapping, memory ownership and compatibility tests.
+Exit gate: wrappers pass lifecycle, concurrency, error mapping, memory ownership and compatibility tests. Python is not required to install or run the Rust engine.
 
 ## E9 — Extension system and mature distribution
 
@@ -142,7 +142,7 @@ Deliverables:
 - First-party modules as Rust crates.
 - Isolated subprocess extension protocol.
 - Evaluate WASI Component Model sandboxing as an optional extension ABI.
-- Package repository format only after signing, rollback and dependency-conflict behavior are proven.
+- Standard package formats only after signing, rollback and dependency-conflict behavior are proven.
 - Release channels, support windows, migration guarantees and deprecation policy.
 
 Exit gate: untrusted extensions cannot access undeclared host resources; incompatible upgrades fail closed; recovery and uninstall are tested.
@@ -164,5 +164,6 @@ Every milestone preserves:
 - No Otya programming language or compiler in this repository.
 - No mandatory Otya-hosted compute, database, storage or control plane.
 - No replacement kernel or complete OS distribution in the initial engine project.
+- No engine-managed company, customer, tenant or end-user registry.
 - No assumption that a provider adapter makes an external API available, legal or reliable.
-- No multi-node or high-availability guarantee before it is separately implemented and tested.
+- No multi-operator shared-hosting, clustering or high-availability guarantee before separately designed and tested.
