@@ -218,7 +218,7 @@ impl SqliteStore {
         let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
             | OpenFlags::SQLITE_OPEN_NOFOLLOW
             | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-        let mut connection = Connection::open_with_flags(path, flags)?;
+        let connection = Connection::open_with_flags(path, flags)?;
         connection.busy_timeout(options.busy_timeout)?;
         connection.execute_batch(
             "PRAGMA foreign_keys = ON;
@@ -696,7 +696,8 @@ fn initialize_or_verify_schema(
     }
     verify_migration(&transaction, 1, INITIAL_MIGRATION_ID)?;
     verify_migration(&transaction, 2, KEY_VALUE_MIGRATION_ID)?;
-    let _statement = transaction.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0")?;
+    let statement = transaction.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0")?;
+    drop(statement);
 
     transaction.commit()?;
     verify_initialized_schema(connection)
