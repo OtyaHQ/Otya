@@ -1,6 +1,6 @@
 # Headless and Portable Runtime Model
 
-**Product decision:** Otya Engine is a headless systems engine, not an Android application, APK, desktop application, hosted SaaS product or graphical operating system. It has no mandatory user interface. Its interfaces are Rust APIs, optional command-line tools, HTTPS APIs, webhooks and provider/runtime adapters.
+**Product decision:** the Rust Engine core is headless and portable, while the complete self-hosted distribution includes a browser-based operator console, installation-owned login portal and reusable UI kit. It is not a hosted SaaS product, graphical operating system or mandatory Android/iOS app. Interfaces include Rust APIs, CLI, authenticated management APIs, UI clients, webhooks and provider/runtime adapters.
 
 A phone is a supported control device. It can edit code, start a remote build, approve a deployment, monitor health and call a host application's HTTPS API. The engine itself runs on the selected server or cloud runtime and continues running independently of the phone.
 
@@ -11,7 +11,8 @@ The architecture is split into:
 1. **Portable core:** domain-neutral Rust contracts, configuration parsing, module contracts, policy decisions and deterministic business logic that do not require a particular OS or cloud provider.
 2. **Host/runtime adapter:** translates a platform's request, event, storage, secrets, clock and lifecycle APIs into the core's contracts.
 3. **Provider/storage adapters:** optional integrations that operators select and configure for their own accounts.
-4. **Host application:** owns its user interface, end-user accounts and authorization. A phone browser or mobile app calls that host application's API.
+4. **Operator UI and identity services:** the installed platform provides a management console and may provide its own login portal/user directory. Each is scoped to that installation.
+5. **Host application:** owns its product UI and business authorization. It may use the installation's identity issuer for sign-in, then applies its own resource permissions. A phone browser or mobile app calls that host application's API.
 
 Do not make the portable core depend on Linux paths, a database server, a Cloudflare binding, a GitHub account, an Android activity or a graphical UI. Platform-specific capabilities are injected through adapters.
 
@@ -126,7 +127,7 @@ Still incomplete:
 - generic asynchronous storage/operation contracts;
 - Cloudflare Container runtime profile and generic OCI packaging;
 - generic HTTP server/service adapter for non-Cloudflare hosts;
-- authenticated management API and optional responsive operator console;
+- authenticated management API, responsive operator console and first-run setup UI;
 - production deployment approval, resource isolation, backup/restore and recovery acceptance.
 
 No standalone Otya Android/iOS application or APK is part of the engine product.
