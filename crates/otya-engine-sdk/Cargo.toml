@@ -7,7 +7,6 @@ publish = false
 description = "Application-facing SDK and headless route registry for Otya Engine"
 
 [dependencies]
-otya-engine-core = { path = "../otya-engine-core" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
