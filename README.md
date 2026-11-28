@@ -19,6 +19,8 @@ The engine is built in Rust and is headless-first. It can be embedded in a host 
 
 The engine does not silently create a central Otya service or send customer data to Otya. Remote integrations are opt-in and configured with accounts and credentials controlled by the operator.
 
+**One installation can manage many projects.** An individual developer or company can install Otya once, create workspaces, register multiple applications and deployment components, and explicitly grant selected projects access to shared capabilities. The operator gets one local management plane for inventory, configuration, secrets grants, deployments, health, backups and audit, while each application keeps its own source, data authority, authorization, runtime and release lifecycle. This is local/operator-controlled management, not a global Otya-hosted service or a cross-customer tenant pool. See [Multi-project operator architecture](docs/MULTI_PROJECT_OPERATOR_ARCHITECTURE.md).
+
 ## Applications and websites built on Otya
 
 Otya is the foundation developers build on, not one monolithic application. The experimental `otya-engine-sdk` introduces application manifests, API routes, host-supplied authentication context and capability checks. The example catalog application and its responsive website demonstrate how a separate frontend calls an Otya-powered API. The example is stateless demonstration data, not a production commerce system. See [Applications on Otya](docs/APPLICATIONS_ON_OTYA.md), [example catalog app](examples/catalog-app/README.md) and [Cloudflare Worker host adapter](platforms/cloudflare-worker/README.md).
