@@ -86,22 +86,12 @@ jobs:
         working-directory: platforms/cloudflare-worker
         run: |
           set -euo pipefail
-          grep -q '^workers_dev = false
-      - name: Record runtime boundary
-        run: |
-          echo "This builds and validates a headless Rust Worker with static website assets."
-          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
- wrangler.toml
-          grep -q '^workers_dev = true
-      - name: Record runtime boundary
-        run: |
-          echo "This builds and validates a headless Rust Worker with static website assets."
-          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
- wrangler.preview.toml
+          grep -Fq 'workers_dev = false' wrangler.toml
+          grep -Fq 'workers_dev = true' wrangler.preview.toml
           npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.toml
           npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.preview.toml
 
       - name: Record runtime boundary
         run: |
-          echo "This builds and validates a headless Rust Worker with static website assets."
+          echo "This builds and validates a private production Engine Worker and a separate public read-only preview."
           echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
