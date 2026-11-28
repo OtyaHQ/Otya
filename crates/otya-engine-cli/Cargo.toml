@@ -1,0 +1,16 @@
+[package]
+name = "otya-engine-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Local operator CLI for Otya Engine"
+
+[[bin]]
+name = "otya"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+otya-engine-core = { path = "../otya-engine-core" }
+serde_json.workspace = true
