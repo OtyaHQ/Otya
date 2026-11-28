@@ -39,7 +39,7 @@
 - Rust 1.85 minimum-version job: **passed** — workspace compile and tests for the full workspace, including the optional SQLite crate.
 - The SQLite adapter uses the host system SQLite library. CI installs `libsqlite3-dev` and `pkg-config`; it does not enable the bundled SQLite feature.
 
-Run 193 verifies only the Linux path resolver, private configuration/database file handling and the initial SQLite transaction foundation on a GitHub-hosted Linux runner. The newer storage contract/CLI is pending fresh verification. The Android/WebAssembly portable-core compile checks passed on GitHub-hosted runners, but no Android FFI/app package is built. No broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, full migration lifecycle, online backup/restore, crash recovery, future service daemon, provider APIs or production readiness is claimed.
+These runs verify the current Rust workspace, SQLite contract/CLI smoke flow and portable-core compilation for Android/WebAssembly targets. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, an Android APK/FFI application, an iOS application, the future service daemon, provider APIs or production readiness.
 
 ## Not yet implemented
 
