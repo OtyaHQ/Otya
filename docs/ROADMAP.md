@@ -17,7 +17,13 @@ Exit gate: architecture reviewed; no mandatory Otya cloud dependency; no hidden 
 
 ## E1 — Rust workspace, build and operator CLI
 
-**Goal:** build and run the smallest useful engine locally.
+**Goal:** build and run the smallest useful engine locally for one installing OS user.
+
+Deliverables:
+- XDG-aware Linux paths for config, data, state, cache and runtime sockets.
+- Single-operator configuration without tenant/company/end-user identity fields.
+- Per-user systemd service template with no root requirement for normal use.
+- Linux support matrix for x86_64 and aarch64.
 
 Deliverables:
 - Rust workspace with pinned stable toolchain and declared MSRV.
