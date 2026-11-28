@@ -266,7 +266,9 @@ backend = "sqlite"
 path = ":memory:"
 busy_timeout_ms = 5000
 "#;
-        let report = parse_config(source).expect("config should parse").validate();
+        let report = parse_config(source)
+            .expect("config should parse")
+            .validate();
         assert!(!report.is_valid());
     }
 
@@ -285,7 +287,9 @@ busy_timeout_ms = 5000
     #[test]
     fn rejects_unbounded_sqlite_busy_timeout() {
         let source = VALID.replace("busy_timeout_ms = 5000", "busy_timeout_ms = 0");
-        let report = parse_config(&source).expect("config should parse").validate();
+        let report = parse_config(&source)
+            .expect("config should parse")
+            .validate();
         assert!(!report.is_valid());
     }
 }
