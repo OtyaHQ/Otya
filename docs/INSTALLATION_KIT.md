@@ -77,13 +77,19 @@ The installer must be idempotent. Re-running it must not destroy or overwrite cu
 ## CLI contract
 
 Current initial commands:
-- version
-- doctor
-- paths
-- config validate
+- `otya version`
+- `otya doctor`
+- `otya paths`
+- `otya paths --instance NAME`
+- `otya paths --create`
+- `otya paths --instance NAME --create --json`
+- `otya config validate --file FILE`
+
+The paths command is read-only by default. An explicit `--create` action prepares owner-only directories for the selected local installation. On Linux this operation refuses root execution, rejects symlinked path components and unsafe parent directories, verifies final-directory ownership and applies mode 0700. It does not write or overwrite configuration files.
 
 Planned commands, not yet implemented:
 - install with embedded or service mode
+- safe config init and config migration
 - service install, start, stop, restart and status
 - logs
 - modules list, inspect, enable and disable
@@ -95,11 +101,9 @@ Planned commands, not yet implemented:
 
 Destructive commands require a preview, explicit confirmation and a verified backup where data is involved.
 
-The paths command is read-only. It resolves XDG directory names and prints diagnostics, but it does not create paths or validate owner, permissions, symlinks, available disk space or filesystem safety. Those checks belong to the next secure filesystem/install milestone.
-
 ## Linux-first packaging
 
-The first installation profile is per-user. Respect XDG configuration, data, state, cache and runtime directories. See [Linux Platform Model](LINUX_PLATFORM_MODEL.md). Do not create a global service or root-owned shared database. A second OS user gets a separate installation. The local service socket is private to the installing UID; it does not isolate mutually untrusted processes sharing the same UID.
+The first installation profile is per-user. Respect XDG configuration, data, state, cache and runtime directories. See [Linux Platform Model](LINUX_PLATFORM_MODEL.md). Do not create a global service or root-owned shared database. A second OS user gets a separate installation. One OS user may create separate named local instances using `--instance NAME`; each has a distinct config, data, state, cache and runtime directory namespace. The local service socket is private to the installing UID; it does not isolate mutually untrusted processes sharing the same UID.
 
 The configuration validator currently requires an absolute SQLite path. Environment variables and tilde characters inside TOML strings are not expanded.
 
