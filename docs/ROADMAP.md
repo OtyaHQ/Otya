@@ -52,6 +52,22 @@ Deliverables:
 
 Exit gate: a fresh isolated installation can be configured and administered locally; no account at Otya is needed; a second installation has separate users, signing keys, data and modules.
 
+## E0.8 — AI application creation and provider provisioning
+
+**Goal:** let a developer or non-developer describe an application, compose reusable Otya capabilities, connect infrastructure they own and safely provision/deploy the result.
+
+Deliverables:
+- Guided AI requirements gathering and a versioned, provider-neutral application blueprint.
+- Cloudflare-first provider connection using the official OAuth/MCP server, with an Otya-owned MCP client, least-privilege grants and tool audit.
+- Provider-neutral capability catalogue and adapters for Cloudflare, GitHub, Firebase, Supabase, email, payments, AI and custom APIs.
+- Declarative resource graph, dry-run plan, permission/cost/limit review, explicit approvals and idempotent provisioning.
+- Generated editable source, schemas/migrations, UI, API contracts, tests, manifests and documentation.
+- Preview deployment, acceptance verification, explicit production promotion and exportable project artifacts.
+- Guided non-developer mode and developer mode operating on the same project/source/runtime.
+- Extraction plan for generic modules from OEnd, OID, OPoint, Omy, O and OWeb without importing private data or making OEnd mandatory for unrelated apps.
+
+Exit gate: from a fresh isolated operator installation, a user connects a disposable provider account, describes a sample application, reviews and approves its blueprint/resource plan, deploys a working preview, verifies it, exports the source and can continue operating the app without Otya-hosted services.
+
 ## E1 — Rust workspace, build and operator CLI
 
 **Goal:** build and run the smallest useful engine locally for one installing operator.
