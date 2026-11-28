@@ -42,6 +42,12 @@ Embedded library, optional service and CLI reuse the same core contracts. The se
 
 ## 3. Product layers
 
+### Application SDK and applications
+
+The application SDK is a separate layer above the portable engine core. It defines versioned application manifests, exact route declarations, request/response contracts and host-supplied authorization context. Developers build independent applications on top of these contracts; the application owns its business logic, frontend, end-user identities and product rules. See [Applications on Otya](APPLICATIONS_ON_OTYA.md). The SDK does not turn the engine into one large business application.
+
+A frontend website or phone client calls the application's HTTPS API. The host adapter translates requests into application SDK calls. A website can be served separately or through a runtime's static-asset feature. The portable core itself remains headless and has no mandatory UI.
+
 ### Core Rust library
 
 Owns configuration parsing, lifecycle state, typed errors, operation context, capability checks, module registration, provider-neutral operation state and stable extension interfaces. It does not create users, companies, tenants or a remote installation record. It avoids hidden network access and ambient filesystem access.
@@ -58,11 +64,11 @@ This service is not a shared host for unrelated operators. The operator remains 
 
 ### SDK and platform bindings
 
-The Rust API is canonical. A deliberately versioned C ABI provides a native boundary for Flutter/Dart and Python packages. Each wrapper is thin and defines handle ownership, buffer lifetimes, threading and error semantics. Python support is a separately installable optional SDK; CPython is not embedded in the Otya core and Python is not a runtime requirement. Do not build separate business-logic implementations in Dart, Python or TypeScript.
+The Rust API is canonical. The application-facing `otya-engine-sdk` currently provides an initial in-process application registry and route policy contract; it is an experimental workspace crate, not a released SDK package. The C ABI and optional Python/Flutter/Dart platform bindings are separate future integration surfaces. The Rust API is canonical. A deliberately versioned C ABI provides a native boundary for Flutter/Dart and Python packages. Each wrapper is thin and defines handle ownership, buffer lifetimes, threading and error semantics. Python support is a separately installable optional SDK; CPython is not embedded in the Otya core and Python is not a runtime requirement. Do not build separate business-logic implementations in Dart, Python or TypeScript.
 
-### Adapters
+### Host and provider adapters
 
-Adapters connect to operator-selected databases, files, secret stores, identity systems, messaging providers, cloud platforms and developer tools. They are optional, least-privilege and separately versioned.
+Host adapters expose application routes through a runtime such as a native Linux HTTP service or Cloudflare Worker. Provider/storage adapters connect to operator-selected databases, files, secret stores, identity systems, messaging providers, cloud platforms and developer tools. The first Worker adapter now serves a static example website and routes its API to the sample catalog application; authentication and durable storage for real applications remain incomplete. They are optional, least-privilege and separately versioned.
 
 ## 4. Operating modes
 
