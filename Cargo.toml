@@ -3,6 +3,8 @@ members = [
     "crates/otya-engine-core",
     "crates/otya-engine-cli",
     "crates/otya-engine-storage-sqlite",
+    "crates/otya-engine-sdk",
+    "examples/catalog-app",
 ]
 resolver = "3"
 
