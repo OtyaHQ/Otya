@@ -125,6 +125,36 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 - [ ] Release signatures and verification before install/update.
 - [ ] Telemetry off by default and diagnostic export explicitly approved.
 
+## Bring-your-own-infrastructure and provider connections
+
+- [ ] Otya does not create provider accounts or provision paid cloud resources during setup.
+- [ ] Provider catalogue distinguishes Otya-local modules from user-owned external services.
+- [ ] Provider connection, resource binding, project grant and webhook endpoint have separate versioned records.
+- [ ] Guided OAuth/API-token/mTLS/custom REST/OpenAPI connection workflows.
+- [ ] Provider-specific least-privilege scope validation and account/resource selection.
+- [ ] Local credential vault backed by OS secret store, operator-managed vault/KMS or encrypted local store.
+- [ ] Saved secret values are write-only, encrypted at rest, never returned to browser and redacted from logs.
+- [ ] Deployment credential is separate from application runtime secret; remote secrets are injected into provider-native secret stores.
+- [ ] Development, staging and production connections/secrets/resources are isolated.
+- [ ] Cloudflare adapter supports token scope checks, inventory, deployment plan, bindings and Worker secrets.
+- [ ] Firebase adapter distinguishes public Firebase API configuration from privileged service-account credentials.
+- [ ] Supabase adapter distinguishes publishable from secret keys and provides an RLS review checklist.
+- [ ] Generic REST/OpenAPI and signed webhook connectors with bounded requests and schema validation.
+- [ ] Webhooks verify signatures over raw body, timestamps, replay, event IDs, size limits and idempotency.
+- [ ] Mutating, destructive, billable and production operations require a preview plan and explicit approval.
+- [ ] Provider health, expiry, missing scope, quotas, status, last verified time and billing owner are visible.
+- [ ] Local-only operation works with no external provider connection.
+- [ ] Deployed workloads continue while local Otya Console/control plane is offline.
+
+## Brand, white-label and UI identity
+
+- [ ] Master brand, original logo and wordmark approved; icon-only, monochrome, reversed and favicon assets.
+- [ ] Product family uses consistent Otya, Engine, Console, Identity, Connect, Studio naming.
+- [ ] Light/dark design tokens and responsive UI components meet accessibility requirements.
+- [ ] Installation-level organization logo, name, login portal and theme customization.
+- [ ] External provider attribution, billing responsibility and data location are visible.
+- [ ] Brand voice, accessibility, localization, icon and UI contribution rules documented.
+
 ## Integrations
 
 - [ ] Generic REST/HTTP adapter with bounded timeouts and body limits.
