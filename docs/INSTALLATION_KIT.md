@@ -15,7 +15,7 @@ The same versioned core is packaged in several forms:
 3. **Operator CLI:** install, configure, diagnose, migrate, back up, restore and upgrade.
 4. **Optional local service:** a supervised process for durable background work and local IPC.
 5. **Platform wrappers:** Flutter/Dart and Python packages built only after the underlying FFI API is stable.
-6. **Optional adapters:** provider or storage packages installed only when the operator needs them. The experimental Linux SQLite adapter is a separate crate and is not linked into the core or CLI by default.
+6. **Optional adapters:** provider or storage packages installed only when the operator needs them. The Linux SQLite adapter is a separate crate and is not linked into the core; the Linux CLI includes explicit storage commands and links the adapter only on Linux.
 
 The embedded library does not require installation of the optional service. The optional service runs under the installing OS user. It is not shared with unrelated OS users and does not require an Otya cloud account.
 
@@ -85,6 +85,8 @@ Current initial commands:
 - `otya paths --instance NAME --create --json`
 - `otya config init [--instance NAME] [--json]`
 - `otya config validate --file FILE`
+- `otya storage init --config FILE` (explicitly initializes the configured SQLite database)
+- `otya storage check --config FILE` (checks an existing database without creating a missing file or applying migrations)
 
 The paths command is read-only by default. An explicit `--create` action prepares owner-only directories for the selected local installation. On Linux this operation refuses root execution, rejects symlinked path components and unsafe parent directories, verifies final-directory ownership and applies mode 0700. It does not write or overwrite configuration files. Separately, `otya config init` prepares only the config directory and exclusively creates `otya-engine.toml` with mode 0600. It refuses to overwrite any existing file (including a symlink) and does not follow symlinked parent components. See [Configuration Lifecycle](CONFIGURATION_LIFECYCLE.md).
 
@@ -94,7 +96,6 @@ Planned commands, not yet implemented:
 - service install, start, stop, restart and status
 - logs
 - modules list, inspect, enable and disable
-- storage check
 - backup create, verify and restore
 - migration plan, apply and status
 - update check, install and rollback
@@ -102,7 +103,13 @@ Planned commands, not yet implemented:
 
 Destructive commands require a preview, explicit confirmation and a verified backup where data is involved.
 
-The initial optional SQLite adapter is documented in [STORAGE_SQLITE.md](STORAGE_SQLITE.md). Building it on Linux requires the host's SQLite development library and `pkg-config` (for example, `libsqlite3-dev` and `pkg-config` on Debian/Ubuntu). It is linked against the system SQLite library rather than bundling a separate copy. This adapter is a preliminary storage foundation only; it does not yet provide the generic storage contract, complete migrations, online backup/restore or crash recovery.
+The optional Linux SQLite adapter is documented in [STORAGE_SQLITE.md](STORAGE_SQLITE.md). Building it on Linux requires the host's SQLite development library and `pkg-config` (for example, `libsqlite3-dev` and `pkg-config` on Debian/Ubuntu). It is linked against the system SQLite library rather than bundling a separate copy. It implements the core storage contract and an initial v1-to-v2 schema migration, but not a general migration runner, online backup/restore or crash recovery.
+
+## Phone-first development
+
+A contributor can use a phone browser for the full development workflow. The repository includes a Codespaces devcontainer with Rust, SQLite build dependencies and Android/WebAssembly compile targets. Open `github.dev` for lightweight edits; use a Codespace for a terminal and builds; use GitHub Actions for CI and remote target compilation. See [Phone-First Development](PHONE_FIRST_DEVELOPMENT.md). The browser-only editor does not have a terminal, and Codespaces usage is subject to account quota/billing.
+
+The Android application is a separate future distribution: a native Kotlin or Flutter host will embed the portable Rust core through a reviewed FFI package. The current portability workflow is a core compile check only; it does not generate an APK or make the CLI/Linux SQLite adapter available on Android. See [Mobile Runtime Model](MOBILE_RUNTIME_MODEL.md).
 
 ## Linux-first packaging
 
