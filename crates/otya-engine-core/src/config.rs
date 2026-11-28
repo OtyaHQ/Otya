@@ -64,6 +64,12 @@ impl EngineConfig {
                             "Use a file-backed database when state must persist.",
                         );
                     }
+                } else if !path.is_absolute() {
+                    report.error(
+                        "storage.sqlite_path_not_absolute",
+                        "The SQLite database path must be absolute; relative paths depend on the process working directory.",
+                        "Provide an absolute path inside the installing operator's data directory.",
+                    );
                 }
 
                 if !(100..=120_000).contains(busy_timeout_ms) {
@@ -187,7 +193,7 @@ mode = "embedded"
 
 [storage]
 backend = "sqlite"
-path = "./var/otya-engine.db"
+path = "/home/test/.local/share/otya-engine/engine.db"
 busy_timeout_ms = 5000
 "#;
 
@@ -256,6 +262,16 @@ path = ":memory:"
 busy_timeout_ms = 5000
 "#;
         let report = parse_config(source).expect("config should parse").validate();
+        assert!(!report.is_valid());
+    }
+
+    #[test]
+    fn rejects_relative_database_paths() {
+        let source = VALID.replace(
+            "path = \"/home/test/.local/share/otya-engine/engine.db\"",
+            "path = \"./var/otya-engine.db\"",
+        );
+        let report = parse_config(&source).expect("config should parse").validate();
         assert!(!report.is_valid());
     }
 
