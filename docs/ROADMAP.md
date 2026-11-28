@@ -195,7 +195,9 @@ Deliverables:
 - Versioned application manifest, stable app ID and engine API compatibility declaration.
 - Application registry, exact route contracts, request/response limits and duplicate route detection.
 - Public/authenticated access policy and host-verified capability context.
+- Language-neutral, versioned HTTPS/JSON runtime and management APIs with OpenAPI specifications.
 - Headless HTTP host adapters and frontend-to-API integration pattern.
+- Rust embedded SDK plus language-neutral API contracts and generated TypeScript/Python/Go/Java/.NET/PHP/Ruby client SDKs where demand justifies maintenance.
 - Example catalog API and responsive website proving the application boundary.
 - App contract tests, starter template and eventually a project scaffolder.
 - A separately maintained sample application that builds using only released SDK artifacts, without depending on a private monorepo path.
@@ -247,6 +249,7 @@ Deliverables:
 - Optional local IPC client library for supported desktop/server hosts.
 - Cross-target compile checks as compatibility evidence, not as proof of a complete app.
 - Version compatibility matrix and integration examples.
+- No dependency on Otya-hosted compute or control plane; third-party apps use their own operator's Engine installation and provider accounts.
 
 No standalone Otya Android/iOS app, APK or app-store product is planned in this repository. The complete installation may provide a browser-based operator console and UI toolkit, but the Rust core remains headless and hostable. Android target checks do not imply an APK delivery pipeline.
 
