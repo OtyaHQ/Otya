@@ -12,7 +12,18 @@
 - Initial local CLI commands: `otya version`, `otya doctor`, `otya config validate`.
 - Local diagnostics do not perform network calls.
 - Configuration tests authored, including rejection of unknown company/tenant/user identity fields.
-- Hosted GitHub Actions workflow for formatting, Clippy, tests, CLI smoke checks, release build and Rust 1.85 MSRV.
+- Linux platform model and engineering influence register documented.
+- GitHub Actions stable quality job passed: rustfmt, Clippy, workspace tests, CLI diagnostics, example configuration validation and release build.
+- GitHub Actions minimum supported Rust 1.85 job passed: workspace check and tests.
+
+## CI evidence
+
+- Workflow: Otya Engine CI, run 56.
+- Pull request: #2, head commit `1a9a5a5f73be27d6736a84b3fcfb72c189b1661d`.
+- Stable Rust quality and test job: **passed**.
+- Rust 1.85 minimum-version compile/test job: **passed**.
+
+This evidence verifies the current Rust workspace at that PR revision. It does not verify installation on physical Linux hosts, the future service daemon, provider APIs, data persistence or production readiness.
 
 ## Not yet implemented
 
@@ -23,12 +34,10 @@
 - Secret-store abstraction and provider clients.
 - Durable job queue, outbox, inbox and webhook verification.
 - Backup, restore, migrations and crash recovery.
-- Business modules and application authorization integration.
+- Business modules and host-application authorization integration.
 - Flutter and Python bindings.
 - Cross-platform installers and release provenance.
 
-## Verification
+## Release status
 
-The GitHub Actions workflow is the intended Rust build environment. The workspace must not be described as compiled or passing until the workflow succeeds on the current branch. Local documentation inspection does not substitute for Rust compilation.
-
-A passing CI job is necessary but not sufficient for production readiness. Installation, upgrade, migration, backup/restore, fault-injection and security acceptance tests remain outstanding.
+The branch is an experimental foundation, not a production-ready engine. CI passing is necessary but not sufficient for production readiness. Installation, upgrade, migration, backup/restore, fault-injection, security and platform acceptance tests remain outstanding.
