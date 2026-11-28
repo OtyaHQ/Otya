@@ -34,6 +34,7 @@ At Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624
 - tests for default paths, overrides, instance separation, unsafe instance names, directory create/idempotency, mode hardening, symlink rejection, unsafe parent rejection, private-file mode, existing-file refusal and invalid file names;
 - stable Rust formatting, Clippy, unit tests, CLI config-init/no-overwrite smoke checks, generated/example config validation and release build;
 - Rust 1.85 minimum-version compile and test pass.
+- An initial Linux-only SQLite adapter crate, tested on system SQLite, with private-file checks, Otya application/schema metadata, exclusive metadata initialization, WAL, explicit transactions, rollback and integrity-check tests (CI baseline run 175).
 
 The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. The create-only initializer does not update existing files, replace configs atomically, create databases or implement migrations.
 
@@ -48,7 +49,7 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
-| Storage | Config accepts memory/SQLite selection; no database adapter exists | SQLite implementation, migrations, transactions, locks, integrity checking and customer-managed PostgreSQL adapter |
+| Storage | Initial Linux-only SQLite adapter foundation is implemented; run 175 passed its initial open/WAL/identity/transaction/integrity tests. No generic storage trait exists yet. | Generic storage/transaction contract, module schemas, general migrations/locks/recovery, online backup/restore, crash/disk-full/stress tests, and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
@@ -98,13 +99,13 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 
 ### E3 — Storage and transaction foundation
 
-- Storage traits and conformance suite.
-- SQLite adapter with documented WAL and backup semantics.
-- Migration lock/state and interrupted-migration recovery.
+- Generic storage traits and conformance suite.
+- Complete SQLite adapter with module schema ownership, documented WAL semantics, Online Backup API and tested restore.
+- General migration runner, locks/state and interrupted-migration recovery.
 - Data export/import and verified backup/restore.
 - PostgreSQL only as a later optional customer-managed adapter.
 
-**Acceptance:** crash, concurrency, disk-full, backup and restore tests pass.
+**Acceptance:** generic adapter conformance, crash, concurrency, disk-full, backup and restore tests pass. The current SQLite metadata/transaction foundation does not yet satisfy this gate.
 
 ### E4 — Optional local service and IPC
 
