@@ -31,7 +31,6 @@ pub const SQLITE_SCHEMA_VERSION: u32 = 2;
 
 /// Stable identity recorded for the initial metadata migration.
 const INITIAL_MIGRATION_ID: &str = "otya-engine-storage-sqlite-initial-metadata-v1";
-const KEY_VALUE_MIGRATION_ID: &str = "otya-engine-storage-sqlite-namespaced-kv-v2";
 
 /// Stable identity recorded for the namespaced key/value migration.
 const KEY_VALUE_MIGRATION_ID: &str = "otya-engine-storage-sqlite-namespaced-kv-v2";
@@ -236,7 +235,7 @@ impl SqliteStore {
 
         Ok(Self {
             path: path.to_path_buf(),
-            connection,
+            connection: Mutex::new(connection),
         })
     }
 
@@ -479,147 +478,6 @@ fn storage_backend_error(error: rusqlite::Error) -> StorageError {
 }
 
 
-/// Borrow-scoped adapter transaction used by the core Storage contract.
-pub struct SqliteStorageTransaction<'connection> {
-    transaction: Transaction<'connection>,
-}
-
-impl Storage for SqliteStore {
-    type Transaction<'store> = SqliteStorageTransaction<'store> where Self: 'store;
-
-    fn begin(&mut self) -> Result<Self::Transaction<'_>, StorageError> {
-        let transaction = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)
-            .map_err(storage_backend_error)?;
-        Ok(SqliteStorageTransaction { transaction })
-    }
-
-    fn health_check(&self) -> Result<(), StorageError> {
-        verify_initialized_schema(&self.connection).map_err(storage_backend_error)?;
-        let result: i64 = self
-            .connection
-            .query_row("SELECT 1", [], |row| row.get(0))
-            .map_err(storage_backend_error)?;
-        if result == 1 {
-            Ok(())
-        } else {
-            Err(StorageError::Backend(
-                "SQLite health check returned an unexpected result".to_owned(),
-            ))
-        }
-    }
-}
-
-impl StorageTransaction for SqliteStorageTransaction<'_> {
-    fn get(&mut self, namespace: &str, key: &[u8]) -> Result<Option<Vec<u8>>, StorageError> {
-        validate_namespace(namespace)?;
-        validate_key(key)?;
-        self.transaction
-            .query_row(
-                "SELECT value FROM otya_kv WHERE namespace = ?1 AND key = ?2",
-                params![namespace, key],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(storage_backend_error)
-    }
-
-    fn put(&mut self, namespace: &str, key: &[u8], value: &[u8]) -> Result<(), StorageError> {
-        validate_namespace(namespace)?;
-        validate_key(key)?;
-        if value.len() > MAX_STORAGE_VALUE_BYTES {
-            return Err(StorageError::ValueTooLarge);
-        }
-        self.transaction
-            .execute(
-                "INSERT INTO otya_kv (namespace, key, value) VALUES (?1, ?2, ?3)
-                 ON CONFLICT(namespace, key) DO UPDATE SET value = excluded.value",
-                params![namespace, key, value],
-            )
-            .map_err(storage_backend_error)?;
-        Ok(())
-    }
-
-    fn delete(&mut self, namespace: &str, key: &[u8]) -> Result<bool, StorageError> {
-        validate_namespace(namespace)?;
-        validate_key(key)?;
-        let changed = self
-            .transaction
-            .execute(
-                "DELETE FROM otya_kv WHERE namespace = ?1 AND key = ?2",
-                params![namespace, key],
-            )
-            .map_err(storage_backend_error)?;
-        Ok(changed > 0)
-    }
-
-    fn scan_prefix(
-        &mut self,
-        namespace: &str,
-        prefix: &[u8],
-        limit: usize,
-    ) -> Result<Vec<StorageEntry>, StorageError> {
-        validate_namespace(namespace)?;
-        validate_key(prefix)?;
-        if limit == 0 || limit > MAX_STORAGE_SCAN_LIMIT {
-            return Err(StorageError::InvalidScanLimit);
-        }
-        let mut statement = self
-            .transaction
-            .prepare(
-                "SELECT key, value FROM otya_kv
-                 WHERE namespace = ?1 AND substr(key, 1, length(?2)) = ?2
-                 ORDER BY key LIMIT ?3",
-            )
-            .map_err(storage_backend_error)?;
-        let rows = statement
-            .query_map(params![namespace, prefix, limit as i64], |row| {
-                Ok(StorageEntry {
-                    key: row.get(0)?,
-                    value: row.get(1)?,
-                })
-            })
-            .map_err(storage_backend_error)?;
-        rows.collect::<Result<Vec<_>, _>>()
-            .map_err(storage_backend_error)
-    }
-
-    fn commit(self) -> Result<(), StorageError> {
-        self.transaction.commit().map_err(storage_backend_error)
-    }
-}
-
-fn validate_namespace(namespace: &str) -> Result<(), StorageError> {
-    let bytes = namespace.as_bytes();
-    let valid = !bytes.is_empty()
-        && bytes.len() <= MAX_STORAGE_NAMESPACE_BYTES
-        && bytes.iter().all(|byte| {
-            byte.is_ascii_lowercase()
-                || byte.is_ascii_digit()
-                || *byte == b'.'
-                || *byte == b'_'
-                || *byte == b'-'
-        });
-    if valid {
-        Ok(())
-    } else {
-        Err(StorageError::InvalidNamespace(namespace.to_owned()))
-    }
-}
-
-fn validate_key(key: &[u8]) -> Result<(), StorageError> {
-    if key.len() > MAX_STORAGE_KEY_BYTES {
-        Err(StorageError::KeyTooLarge)
-    } else {
-        Ok(())
-    }
-}
-
-fn storage_backend_error(error: impl std::fmt::Display) -> StorageError {
-    StorageError::Backend(error.to_string())
-}
-
 fn initialize_or_verify_schema(
     connection: &mut Connection,
     path: &Path,
@@ -675,8 +533,11 @@ fn initialize_or_verify_schema(
 
     if schema_version == 1 {
         transaction.execute_batch(
-            "CREATE TABLE otya_kv (
-                namespace TEXT NOT NULL CHECK (length(namespace) BETWEEN 1 AND 128),
+            "CREATE TABLE otya_engine_kv (
+                namespace TEXT NOT NULL CHECK (
+                    length(namespace) BETWEEN 1 AND 128
+                    AND namespace NOT GLOB '*[^a-z0-9._-]*'
+                ),
                 key BLOB NOT NULL CHECK (length(key) <= 4096),
                 value BLOB NOT NULL CHECK (length(value) <= 16777216),
                 PRIMARY KEY (namespace, key)
@@ -696,7 +557,7 @@ fn initialize_or_verify_schema(
     }
     verify_migration(&transaction, 1, INITIAL_MIGRATION_ID)?;
     verify_migration(&transaction, 2, KEY_VALUE_MIGRATION_ID)?;
-    let statement = transaction.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0")?;
+    let statement = transaction.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
     drop(statement);
 
     transaction.commit()?;
@@ -722,7 +583,7 @@ fn verify_initialized_schema(connection: &Connection) -> Result<(), SqliteStoreE
     }
     verify_migration_on_connection(connection, 1, INITIAL_MIGRATION_ID)?;
     verify_migration_on_connection(connection, 2, KEY_VALUE_MIGRATION_ID)?;
-    let _statement = connection.prepare("SELECT namespace, key, value FROM otya_kv LIMIT 0")?;
+    let _statement = connection.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
     Ok(())
 }
 
