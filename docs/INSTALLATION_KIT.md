@@ -105,6 +105,12 @@ Destructive commands require a preview, explicit confirmation and a verified bac
 
 The optional Linux SQLite adapter is documented in [STORAGE_SQLITE.md](STORAGE_SQLITE.md). Building it on Linux requires the host's SQLite development library and `pkg-config` (for example, `libsqlite3-dev` and `pkg-config` on Debian/Ubuntu). It is linked against the system SQLite library rather than bundling a separate copy. It implements the core storage contract and an initial v1-to-v2 schema migration, but not a general migration runner, online backup/restore or crash recovery.
 
+## Applications built on Otya
+
+The engine is a reusable foundation, not a bundled application. Developers can create a separate Rust app against the application SDK, or later connect another language through a stable HTTPS client contract. Websites and phone frontends remain separate from the engine and call the app's API. See [Applications on Otya](APPLICATIONS_ON_OTYA.md) and [the example catalog app](../examples/catalog-app/README.md).
+
+The current SDK is an experimental workspace crate and has not been published. It has a manifest/route registry and host-supplied authorization context, but does not yet provide session verification, a generic HTTP server, async storage, durable jobs or a production app lifecycle.
+
 ## Phone-first development
 
 A contributor can use a phone browser for the full development workflow. The repository includes a Codespaces devcontainer with Rust, SQLite build dependencies and Android/WebAssembly compile targets. Open `github.dev` for lightweight edits; use a Codespace for a terminal and builds; use GitHub Actions for CI and remote target compilation. See [Phone-First Development](PHONE_FIRST_DEVELOPMENT.md). The browser-only editor does not have a terminal, and Codespaces usage is subject to account quota/billing.
