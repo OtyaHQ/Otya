@@ -10,6 +10,10 @@ The application owns its business model, user interface, end-user accounts and p
 
 Otya Engine itself is headless. It is not an APK, Android/iOS app, desktop GUI, website builder or app-store product.
 
+## Independent operator model
+
+Otya is installed separately by each developer or organization. Their application source remains in their own repository; the Engine is a dependency and runtime underneath it. An operator can run several applications inside one intentionally shared trust boundary or create separate named installations for stronger isolation. The Engine does not provide a shared multi-tenant customer pool. See [Building Independent Applications on Otya](INDEPENDENT_OPERATOR_GUIDE.md) for executable current setup steps, the actual shipped surface, non-Rust limitations and product/Worker retirement policy.
+
 ## What an Otya-powered product looks like
 
 ```text
