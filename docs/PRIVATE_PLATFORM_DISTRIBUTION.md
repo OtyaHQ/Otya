@@ -23,6 +23,8 @@ The core invariant is:
 
 This supersedes any interpretation that one installation can manage only one application. It does not create a public multi-tenant service.
 
+The full profile is a **modular distribution**, not one oversized executable. Keep the portable Rust core minimal and measure its binary separately from the supervisor, Console assets, identity module, provider adapters, storage drivers and optional UI builder. A developer embedding only the core should not download the full operator interface. A non-developer installing the full platform gets the complete local Console and selected services; that bundle will have a different size and resource budget.
+
 ## 2. The complete installed product
 
 The installable distribution has six cooperating layers.
