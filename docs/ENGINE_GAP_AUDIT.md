@@ -21,7 +21,7 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-The last historically verified full foundation was Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`. It verified the Linux filesystem and initial SQLite adapter before the newer core storage contract, CLI storage commands and phone/mobile workflow were added. Those newer commits are implemented on the current draft branch, but require their own green CI results. Run 193 must not be treated as verification of those later changes. At run 193, the branch contained:
+The current engine and mobile portability foundations passed Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958) and Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), commit `148f837595e4e42d314fa8b59234fb5363111f01`. The runs verify the current Rust workspace, storage adapter/CLI smoke flow and portable-core Android/WebAssembly target builds. The older run 193 is historical evidence for the earlier Linux filesystem and SQLite foundation. The current branch contains:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
