@@ -77,7 +77,7 @@ Generic HTTP, signed webhooks, SMTP and S3-compatible storage are additional ada
 
 This repository is the source of truth for Otya Engine. The current repository is an experimental architecture foundation; architecture documents are not evidence that an installer, daemon, adapter or production service already exists.
 
-Every feature must be labeled accurately as proposed, implemented, CI-tested, manually verified or released. See [Engine roadmap](docs/ROADMAP.md), [requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md), and [implementation gates](docs/ENGINE_RELIABILITY_MODEL.md).
+Every feature must be labeled accurately as proposed, implemented, CI-tested, manually verified or released. See [Engine roadmap](docs/ROADMAP.md), [requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md), [comprehensive gap audit](docs/ENGINE_GAP_AUDIT.md), and [implementation gates](docs/ENGINE_RELIABILITY_MODEL.md).
 
 ## Engineering influences
 
@@ -97,6 +97,7 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
 - [Engineering influences](docs/ENGINEERING_INFLUENCES.md)
+- [Comprehensive gap audit](docs/ENGINE_GAP_AUDIT.md)
 - [Reliability, backup and recovery](docs/ENGINE_RELIABILITY_MODEL.md)
 - [Modules and provider adapters](docs/MODULES_AND_ADAPTERS.md)
 - [Media Kit design lessons](docs/MEDIA_KIT_DESIGN_LESSONS.md)
