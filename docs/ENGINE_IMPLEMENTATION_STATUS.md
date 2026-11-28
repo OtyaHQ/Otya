@@ -17,17 +17,19 @@
 - CLI smoke test creates an isolated named instance on a non-root Linux runner.
 - Read-only `otya paths` inspection does not create or modify files.
 - Linux `otya config init` prepares only the config directory and exclusively creates `otya-engine.toml` with mode 0600; it refuses existing files and does not follow symlinked parents.
-- The starter config selects embedded mode with memory storage and emits a volatility warning; no persistent storage adapter is claimed to exist.
+- The starter config selects embedded mode with memory storage and emits a volatility warning.
+- A separate Linux-only `otya-engine-storage-sqlite` crate provides an initial optional SQLite foundation: owner-only database-file creation/opening, no-follow checks, Otya application/schema metadata, exclusive first metadata transaction, WAL mode, bounded busy timeout, explicit rollback-safe transactions and SQLite integrity checks. It is not a generic storage contract or complete migration/backup system.
 - Local commands do not make network calls.
 - Comprehensive engine gap audit and staged implementation plan documented.
 - Obsolete .ot language example removed from the active engine branch.
 
 ## CI evidence
 
-- Workflow: Otya Engine CI, [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062).
+- Configuration initializer evidence: Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062).
+- Initial SQLite adapter baseline (before final private-file hardening and added reopen/preservation tests): Otya Engine CI [run 175](https://github.com/OtyaHQ/Otya/actions/runs/46141620082), commit `39489a3dbd77157d04058796c8f07237037ace76`.
 - Pull request: #2, tested implementation commit `cb3d33e29e6de51ea13ee92ef3587782d1eec2fd`.
-- Stable Rust quality job: **passed** — rustfmt, Clippy, workspace tests, doctor and paths CLI smoke tests, named-instance directory creation, secure config initialization with mode check, generated config validation, no-overwrite/content-preservation check, example configuration validation and release build.
-- Rust 1.85 minimum-version job: **passed** — workspace compile check and tests.
+- Stable Rust quality job: **passed** — rustfmt, Clippy, workspace tests including initial SQLite initialization/WAL/transaction/identity tests, doctor and paths CLI smoke tests, secure config initialization with mode check, generated config validation, no-overwrite/content-preservation check, example configuration validation and release build.
+- Rust 1.85 minimum-version job: **passed** — workspace compile check and tests, including the SQLite foundation.
 
 This verifies the Linux path resolver, private directory preparation and create-only configuration initializer on the GitHub-hosted Linux runner. It does not verify installation on a range of physical Linux distributions, arbitrary custom install roots, atomic config replacement, the future service daemon, data persistence, provider APIs or production readiness.
 
@@ -37,7 +39,7 @@ This verifies the Linux path resolver, private directory preparation and create-
 - Crash/power-loss-safe temporary-file replacement for configuration; a process interruption during first creation may leave an incomplete file that must be inspected before retrying.
 - Arbitrary operator-selected root paths beyond XDG overrides and validated local instance names.
 - Free-space and filesystem-capacity diagnostics.
-- Persistent SQLite storage adapter and transaction manager.
+- Full SQLite storage contract, module tables, general schema migration runner, online backup/restore and crash-recovery support.
 - PostgreSQL adapter.
 - Per-user service and authenticated local IPC.
 - Linux installer, package signatures and service hardening.
