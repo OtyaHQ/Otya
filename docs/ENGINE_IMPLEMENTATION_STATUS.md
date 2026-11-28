@@ -25,7 +25,8 @@
 - A separate portability workflow compiles the platform-neutral core for Android and WebAssembly; these are library compatibility checks only, not an APK or app build.
 - A minimal Cloudflare Rust Worker adapter and manual deployment workflow are committed; the new dedicated CI check and a first preview deployment are pending.
 - Phone-first and headless-runtime architecture guides distinguish remote development/control from the engine's runtime.
-- A separate Cloudflare Workers Rust/WebAssembly host adapter is committed with /health and /version handlers; its CI compile check and first deployment are pending.
+- A separate Cloudflare Workers Rust/WebAssembly host adapter serves /health and /version, a responsive static example website and the example catalog API; Worker compile checks passed on run 90. A first deployed preview and browser end-to-end test have not been performed.
+- The application SDK, example application and route-level tests are committed: manifests, exact routes, application API version checks, host-supplied caller context, access policies, declared capability checks and request/response bounds.
 - A manual GitHub Actions deployment workflow can deploy a preview Worker or production Worker from main using operator-owned Cloudflare secrets. It does not auto-deploy and does not contain credentials.
 - The engine product is explicitly headless: no standalone Otya Android/iOS app, APK, desktop GUI or app-store product is planned.
 - Local commands do not make network calls.
@@ -39,7 +40,7 @@
 - Subsequent commits update documentation; the tested Rust/storage implementation is unchanged from the code commit above.
 - The Codespaces devcontainer is committed, but first-launch usability on a real phone browser has not yet been manually validated.
 
-The CI results verify the tested Linux workspace and portable-core target compilation. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, the new Cloudflare Worker adapter (pending its dedicated CI run), D1/Queues/Workflows bindings, a first Cloudflare deployment, the future service daemon, provider APIs or production readiness.
+The CI results verify the tested Linux workspace and portable-core target compilation. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, real Cloudflare deployment/browser behavior, D1/Queues/Workflows bindings, a first Cloudflare deployment, the future service daemon, provider APIs or production readiness.
 
 ## Not yet implemented
 
@@ -55,7 +56,9 @@ The CI results verify the tested Linux workspace and portable-core target compil
 - Secret-store abstraction and provider clients.
 - Durable job queue, scheduler, outbox, inbox and webhook verification.
 - Backup, restore, migrations and crash recovery.
-- Business modules and host-application authorization integration.
+- Production host-application authorization integration, secure session/token verification and real application-user permissions.
+- Async app handlers, request body forwarding, middleware, dynamic route parameters and streaming support.
+- Persistent application schemas, migrations, durable operations and background jobs.
 - Stable C ABI, Python and optional Kotlin/JNI or Flutter/Dart host-application SDKs; no SDK packages are released yet.
 - Android/iOS platform-specific embedding adapters only if a host application needs them; no standalone Otya mobile app or APK pipeline is planned.
 - Generic authenticated HTTP management/API server and async remote-storage/operation contracts.
