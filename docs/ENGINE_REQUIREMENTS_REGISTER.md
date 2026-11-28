@@ -5,12 +5,28 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 ## Product boundary and operator model
 
 - [ ] One installation belongs to one installing operator; an operator may be an individual or organization.
-- [ ] No company registration, tenant provisioning, shared user directory or vendor installation registration in core.
+- [ ] No global/cross-installation company registration, tenant provisioning, shared user directory or vendor installation registration.
+- [ ] Each full platform installation can maintain its own private organization/workspace/project registry and identity user/group directory without sharing it with another installation.
 - [ ] No mandatory Otya account, hosted control plane, database, compute or telemetry.
-- [ ] Host application owns its users, business identities and permissions.
+- [ ] Applications can authenticate through the installation-owned identity provider while retaining their own business identities, resource permissions and authorization.
 - [ ] Separate operators use separate isolated installations; no implicit sharing.
 - [x] One operator can create separate named local instances under its own OS account, each with separate XDG paths.
 - [ ] No central heartbeat, usage metering or remote enable/disable path.
+
+## Private identity, access and operator UI
+
+- [ ] Per-installation identity issuer, local user/group directory and branded login portal.
+- [ ] OIDC/OAuth 2.0 provider endpoints, client registration, issuer/audience/scope validation and JWKS.
+- [ ] Password, passkey/WebAuthn, TOTP MFA, invitation, recovery and secure session lifecycle.
+- [ ] Signing-key rotation, session revocation, service identities and machine-to-machine authentication.
+- [ ] Optional external OIDC/SAML federation without requiring an external IdP for local operation.
+- [ ] Shared authentication for selected internal apps while preserving application-owned authorization.
+- [ ] Project-scoped roles, capability grants, default-deny policies and privilege audit.
+- [ ] Authenticated local management API and browser operator console.
+- [ ] Guided non-developer workflows for members, workspaces, services, monitoring, backups and deployments.
+- [ ] Reusable accessible UI kit, themes, localization, app templates and schema-driven forms.
+- [ ] No plaintext secrets in UI, logs, config manifests or browser clients.
+- [ ] Security threat model, independent protocol conformance tests and external review before production identity release.
 
 ## Installation and Linux lifecycle
 
@@ -20,7 +36,8 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [x] Explicit Linux directory preparation with owner-only permissions, parent validation, no-follow path walking and unit/CI smoke tests.
 - [x] Linux create-only starter configuration initialization with mode 0600, private parent directory, no-follow traversal and no-overwrite behavior (CI-verified).
 - [ ] Atomic configuration replacement, explicit backup/preservation and schema-migration behavior.
-- [ ] Embedded library is the primary artifact with stable public API.
+- [ ] Complete self-hosted platform distribution is installable, including local supervisor, management API, browser console and first-party service modules.
+- [ ] Portable embedded library remains separately consumable with stable public API.
 - [ ] CLI doctor validates actual filesystem ownership, permissions, symlink risk, disk space and host prerequisites.
 - [ ] Arbitrary custom installation-root override beyond XDG paths and named local instances.
 - [ ] Optional per-user service with owner-only local IPC.
