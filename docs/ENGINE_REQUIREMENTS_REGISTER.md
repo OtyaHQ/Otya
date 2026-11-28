@@ -38,17 +38,18 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] Typed errors, request IDs and local correlation context.
 - [ ] Lifecycle hooks and graceful shutdown.
 - [ ] Module registry, compatibility checks and capability grants.
-- [ ] Storage, secret, transport, clock and platform abstractions.
+- [x] Backend-neutral storage and transaction contract in core, with bounded namespaces, keys, values and prefix scans; latest adapter integration CI pending.
+- [ ] Secret, transport, clock and full platform abstractions.
 - [ ] Adapter conformance and API compatibility tests.
 - [ ] No company_id, tenant_id or end-user directory in core schema.
 - [ ] No mandatory network call during startup or local operation.
 
 ## Storage and data
 
-An initial Linux SQLite foundation exists in `otya-engine-storage-sqlite` (private file opening, schema identity metadata, WAL, transactions and integrity checks). It is not yet accepted as completing the adapter requirement: the generic storage contract, module schemas, general migration lifecycle, online backup/restore and recovery testing remain open.
+The Linux SQLite adapter now implements the core storage contract, namespaced key/value operations and an initial transactional schema v1-to-v2 upgrade. The latest adapter integration requires a fresh green CI run before it is marked verified. Module-owned schemas, a general migration runner, multi-process stress, online backup/restore and recovery testing remain open.
 
 - [ ] No mandatory Otya-hosted or central database.
-- [ ] Optional SQLite adapter for local durable single-operator data.
+- [ ] SQLite adapter production acceptance after current CI, concurrency, crash recovery and backup/restore gates pass.
 - [ ] Optional operator-managed PostgreSQL where concurrent app connectivity is needed.
 - [ ] In-memory mode restricted to tests or explicitly ephemeral workloads.
 - [ ] Transaction and idempotency semantics tested under concurrency.
@@ -99,6 +100,11 @@ An initial Linux SQLite foundation exists in `otya-engine-storage-sqlite` (priva
 
 ## Developer experience and portability
 
+- [x] Codespaces devcontainer for phone-accessible remote Rust development, plus phone-first workflow documentation (first launch still needs manual confirmation).
+- [x] Android and WebAssembly portable-core compile workflow passed on the current branch revision; no APK or app runtime is implied.
+- [ ] Android NDK build, C ABI/JNI and Flutter/Dart FFI packages with API lifecycle tests.
+- [ ] Android private-storage, Keystore, background-work and offline behavior tests.
+- [ ] iOS FFI, Keychain, background-task and App Store release pipeline.
 - [ ] Rust SDK documentation and examples.
 - [ ] Versioned C ABI with ownership, threading and error contracts.
 - [ ] Flutter/Dart FFI wrapper with memory/lifecycle tests.
