@@ -153,6 +153,19 @@ Deliverables:
 
 Exit gate: two clean installations have disjoint user stores, issuer identifiers, signing keys and sessions; applications reject wrong issuer/audience/scope; recovery, MFA and revocation have independent security review.
 
+## E6.5 — Brand system and user experience foundation
+
+**Goal:** make Otya recognisable and understandable to developers, operators and non-developers.
+
+Deliverables:
+- Approved Otya master mark and wordmark, icon, monochrome, reversed and favicon variants.
+- Design tokens, accessible light/dark themes, typography and icon rules.
+- Console, Identity, Connect and Studio naming and navigation patterns.
+- Installation-level organization branding with safe Otya/provider attribution.
+- Brand voice, UI copy, accessibility, localization and contribution rules.
+
+Exit gate: brand artwork and tokens pass design/trademark review; UI components pass accessibility and responsive tests; external providers are visibly attributed and billing ownership is clear.
+
 ## E6 — Provider adapter framework
 
 **Goal:** make provider connections reusable, replaceable and testable.
@@ -164,6 +177,13 @@ Deliverables:
 - Cloudflare, GitHub, Resend and Firebase adapters as separate optional packages.
 - Generic SMTP, REST, webhook and S3-compatible interfaces.
 - Provider health, reconciliation and operator diagnostics.
+- Otya Connect registry and browser wizard for OAuth, scoped API tokens, mTLS and custom REST/OpenAPI connections.
+- Local credential vault abstraction with OS secret store, operator-managed vault/KMS and encrypted local fallback.
+- Separate provider connection, resource binding, project grant and webhook endpoint concepts.
+- Cloudflare account inventory/deploy/secrets/bindings adapter; Firebase project adapter; Supabase project/API/RLS diagnostics adapter.
+- Provider-native runtime secret injection, with provider management credentials kept in the operator vault.
+- Read-only connection verification, sandbox tests, explicit dry-run plans and approval for mutation/deployment/billing actions.
+- Connection health, scope validation, expiry, rotation, quota, provider status and operator-owned billing visibility.
 
 Exit gate: each adapter passes conformance tests and can be disabled or replaced without changing engine core.
 
@@ -262,7 +282,7 @@ Every milestone preserves:
 ## Non-goals
 
 - No Otya programming language or compiler in this repository.
-- No mandatory Otya-hosted compute, database, storage or control plane.
+- No mandatory Otya-hosted compute, database, storage, email, identity, payment or control plane. The full installation provides software and adapters; operators bring and pay for their own hosting/services.
 - No replacement kernel or complete OS distribution in the initial engine project.
 - No global or cross-installation company, customer, tenant or end-user registry. Each independent installation may own its local identity realm and user directory.
 - No assumption that a provider adapter makes an external API available, legal or reliable.
