@@ -46,7 +46,7 @@ Use restrictive permissions:
 - runtime directory: 0700;
 - Unix socket: 0600.
 
-The Linux directory-preparation implementation walks path components using already-open directory descriptors and no-follow opens. It refuses root execution, rejects unsafe parents and foreign-owned final directories, and enforces mode 0700 on final Otya directories. It never deletes existing data. It does not yet create config files or validate free-space capacity.
+The Linux directory-preparation implementation walks path components using already-open directory descriptors and no-follow opens. It refuses root execution, rejects unsafe parents and foreign-owned final directories, and enforces mode 0700 on final Otya directories. It never deletes existing data. The separate `otya config init` operation exclusively creates the starter config file with mode 0600 inside the verified config directory; existing files and symlinks are never overwritten. Atomic replacement, migration, power-loss recovery and free-space capacity checks are not implemented.
 
 The engine must create a runtime subdirectory with owner-only permissions and verify its owner before opening a socket. Runtime files are transient; the XDG runtime directory is not suitable for database files, backups or other durable state.
 
