@@ -4,35 +4,39 @@
 
 ## 1. Product definition
 
-Otya Engine is a Rust-based, independently installable and embeddable engine kit. Each installation belongs to one operator: an individual or an organization choosing to run its own isolated copy. It is not a hosted SaaS product and does not provide company, customer, tenant or end-user account management.
+Otya is a Rust-based, independently installable and embeddable application platform. Each installation belongs to one operator: an individual or organization choosing to run its own isolated environment. The complete distribution includes a local operator control plane and browser console, an installation-owned identity/login service, authorization primitives, reusable UI foundations and shared service modules. It is not a hosted SaaS product.
 
-Each installation has its own configuration, storage, local credentials, logs, runtime socket and lifecycle. The default Linux service runs under the installing OS user. An operator-managed server installation may instead use a dedicated unprivileged service account, but the account operates only that operator's isolated instance. Other unrelated operators do not share it. A person or organization may deliberately operate multiple isolated copies, but those copies do not share engine state unless the operator explicitly connects them.
+Each installation has its own identity issuer, user/group directory, signing keys, configuration, storage, local credentials, logs, runtime services and lifecycle. One company may use one installation to manage many projects and allow selected apps to share staff sign-in and platform capabilities. Another company or individual installs a separate copy; no users, keys, services, data or control-plane state are shared across those installations.
 
-Otya does not operate mandatory hosted compute, a cloud control plane or a central customer database. The engine must perform local work without contacting Otya infrastructure.
+Otya does not operate mandatory hosted compute, a global cloud control plane or a central customer database. The installed platform must perform local work without contacting Otya infrastructure.
 
-The host application owns its product users, business entities, permissions and account model. Otya Engine is unaware of those identities unless a host explicitly passes a narrowly scoped authorization context for a specific operation. The core does not store tenant IDs or maintain a global user directory.
+An application may use the installation-owned identity provider for authentication. It remains responsible for its own business entities, resource permissions and product authorization. The Engine does not maintain a global user directory and does not decide whether an authenticated person may perform a product-specific business action.
 
 ## 2. Architecture at a glance
 
 ```text
 One operator / one isolated installation
           |
-          +-- Host application embeds the Rust library
-          |       |
-          |       +-- Core lifecycle and configuration
-          |       +-- Local capability enforcement
-          |       +-- Module registry
-          |       +-- Storage / transaction interfaces
-          |       +-- Operations / outbox / audit
-          |       +-- Optional provider adapters
+          +-- Local operator control plane and browser console
+          |       +-- Workspaces / projects / environments
+          |       +-- Members / groups / roles / audit
+          |       +-- Modules / configuration / deployments
           |
-          +-- Optional local service
-          |       +-- Background jobs and scheduler
-          |       +-- Webhook intake only when enabled
-          |       +-- Private Unix-domain socket
-          |       +-- Local health and diagnostics
+          +-- Installation-owned identity platform
+          |       +-- Login / recovery / MFA / sessions
+          |       +-- Local user directory and OIDC issuer
+          |       +-- Client registrations / signing keys
           |
-          +-- Operator CLI and installation kit
+          +-- Shared capability services (scoped grants)
+          |       +-- Storage / jobs / events / files
+          |       +-- Notifications / secrets / observability
+          |       +-- Backup / restore / provider adapters
+          |
+          +-- Independent application projects
+          |       +-- Own source / data / business authorization
+          |       +-- Own UI / runtime components / releases
+          |
+          +-- CLI, SDK and embedded Rust core
                   +-- install / configure / doctor
                   +-- status / logs / backup / restore
                   +-- upgrade / rollback / uninstall
@@ -46,11 +50,11 @@ Embedded library, optional service and CLI reuse the same core contracts. The se
 
 The application SDK is a separate layer above the portable engine core. It defines versioned application manifests, exact route declarations, request/response contracts and host-supplied authorization context. Developers build independent applications on top of these contracts; the application owns its business logic, frontend, end-user identities and product rules. See [Applications on Otya](APPLICATIONS_ON_OTYA.md). The SDK does not turn the engine into one large business application.
 
-A frontend website or phone client calls the application's HTTPS API. The host adapter translates requests into application SDK calls. A website can be served separately or through a runtime's static-asset feature. The portable core itself remains headless and has no mandatory UI.
+A frontend website or phone client calls the application's HTTPS API. The host adapter translates requests into application SDK calls. A website can be served separately or through a runtime's static-asset feature. The portable core remains headless; the full installation supplies a separate operator console, identity portal and reusable UI kit.
 
 ### Core Rust library
 
-Owns configuration parsing, lifecycle state, typed errors, operation context, capability checks, module registration, provider-neutral operation state and stable extension interfaces. It does not create users, companies, tenants or a remote installation record. It avoids hidden network access and ambient filesystem access.
+Owns configuration parsing, lifecycle state, typed errors, operation context, capability checks, module registration, provider-neutral operation state and stable extension interfaces. It does not create global users, cross-installation companies/tenants or a remote installation record. A separate installation-owned identity module may manage local users and clients. It avoids hidden network access and ambient filesystem access.
 
 ### Operator CLI and installer
 
@@ -136,13 +140,13 @@ Exactly-once effects across remote providers cannot be guaranteed by the engine 
 - Do not treat namespaces, cgroups, seccomp or AppArmor as universally available. Detect platform support and document limitations.
 - Do not expose local IPC over TCP by default.
 - Keep secrets out of source, plain config, logs and diagnostics.
-- No tenant/end-user authorization layer in engine core. The host app authorizes its own users.
+- No cross-installation tenant or end-user directory. An installation may authenticate its own users; the host app authorizes product-specific actions.
 
 ## 10. Existing Otya ecosystem boundary
 
 OEnd remains the backend and integrations platform for Otya's own products. OID remains the existing person-identity service. Omy Play and Opoint retain product data and product-specific authorization.
 
-Otya Engine must work independently. It may later expose optional OEnd/OID adapters, but must not assume access to Otya cloud services or require Otya identities for startup or local operation.
+Otya Engine must work independently. Its own identity service is per-installation and optional to applications. OEnd and OID remain existing ecosystem services during migration; do not assume access to Otya cloud services or require Otya identities for Engine startup or local operation.
 
 ## 11. Supported-platform strategy
 
