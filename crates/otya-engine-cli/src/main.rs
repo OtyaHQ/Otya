@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{DiagnosticSeverity, parse_config};
+use otya_engine_core::{DiagnosticSeverity, discover_engine_paths, parse_config};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -31,7 +31,13 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Validate customer-owned engine configuration.
+    /// Show this operator's resolved local engine directories.
+    Paths {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Validate operator-owned engine configuration.
     Config {
         #[command(subcommand)]
         command: ConfigCommand,
@@ -65,7 +71,7 @@ fn run(cli: Cli) -> Result<(), String> {
     match cli.command {
         Command::Version => {
             println!("Otya Engine {}", env!("CARGO_PKG_VERSION"));
-            println!("mode: local / customer-operated");
+            println!("mode: local / operator-controlled");
         }
         Command::Doctor { json } => {
             let report = doctor_report();
@@ -90,6 +96,7 @@ fn run(cli: Cli) -> Result<(), String> {
                 }
             }
         }
+        Command::Paths { json } => show_paths(json)?,
         Command::Config { command } => match command {
             ConfigCommand::Validate { file, json } => validate_config(&file, json)?,
         },
@@ -133,6 +140,38 @@ fn doctor_report() -> DoctorReport {
             },
         ],
     }
+}
+
+fn show_paths(json: bool) -> Result<(), String> {
+    let paths = discover_engine_paths().map_err(|error| error.to_string())?;
+
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&paths)
+                .map_err(|error| format!("could not encode path report: {error}"))?
+        );
+        return Ok(());
+    }
+
+    println!("Otya Engine paths for the current operator");
+    println!("config:  {}", paths.config_dir.display());
+    println!("data:    {}", paths.data_dir.display());
+    println!("state:   {}", paths.state_dir.display());
+    println!("cache:   {}", paths.cache_dir.display());
+    match &paths.runtime_dir {
+        Some(path) => println!("runtime: {}", path.display()),
+        None => println!("runtime: unavailable (required before enabling per-user service mode)"),
+    }
+
+    for diagnostic in paths.diagnostics {
+        println!("warning [{}]: {}", diagnostic.code, diagnostic.message);
+    }
+
+    println!();
+    println!("These are resolved path locations only. This command does not create");
+    println!("directories or verify owner, permissions, symlinks or filesystem safety.");
+    Ok(())
 }
 
 fn validate_config(file: &Path, json: bool) -> Result<(), String> {
