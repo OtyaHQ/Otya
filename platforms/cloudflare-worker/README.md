@@ -4,13 +4,16 @@
 
 This project is a separate Cloudflare Worker wrapper around the portable Otya Rust core. It is not an APK, Android application, desktop application, Linux daemon or shared Otya-hosted control plane.
 
-## Current endpoints
+## Current routes and website
 
-- GET /health — returns a small non-sensitive health response and the core configuration schema version.
-- GET /version — returns this adapter package version.
-- Other paths return 404; non-GET methods return 405.
+- GET /health — non-sensitive Worker health response.
+- GET /version — adapter package version.
+- GET /api/v1/catalog/items — example application API, returning static demonstration records.
+- GET /api/v1/catalog/about — example application metadata.
+- Other `/api/*` paths are dispatched through the SDK registry and return standard 404/405 responses.
+- Other paths are served through the Workers Static Assets binding from `public/index.html` and its assets.
 
-No customer data, credentials, business operations, storage bindings, D1 database, queue or Durable Object are configured yet. Do not treat the health endpoint as a production backend.
+The website calls the catalog API using same-origin HTTPS. The example app has no database, user accounts, orders, payments or live inventory. Its routes are public and read-only. This is a proof of the application/frontend boundary, not a production backend.
 
 ## Why this is a separate Cargo workspace
 
@@ -41,6 +44,12 @@ The manual deployment workflow is .github/workflows/cloudflare-worker-deploy.yml
 6. Production is allowed only from main. Configure the GitHub production Environment with required reviewers before using production deployments.
 
 The preview and production Worker names are separate. The current health/version endpoints disclose no credentials or private application data, but future protected endpoints and data bindings must be explicitly authenticated and isolated.
+
+## Application and security boundary
+
+The Worker registers the sample catalog app through `otya-engine-sdk`. Its public route list is intentionally read-only. The current adapter constructs an anonymous caller context; no protected application route should be exposed until a real host session/token verifier and authorization mapping create a verified `CallerContext`. Never trust an end-user identity or capability read directly from an arbitrary request header or body.
+
+The current Worker adapter does not forward request bodies into the SDK, and the SDK registry is synchronous and exact-route-only. Dynamic path parameters, middleware, authentication/session verification, persistent storage and async job execution are future work.
 
 ## Runtime boundary
 
