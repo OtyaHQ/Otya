@@ -1,6 +1,6 @@
 # Bring-your-own-infrastructure provider architecture
 
-**Status:** product architecture and security specification; the provider connection manager, vault and full adapter catalogue are not yet shipped.  
+**Status:** target architecture and security specification. The Rust core now has initial metadata contracts for provider connections, credential references, resource bindings and project grants; CI validation is pending. The registry, vault and provider adapters are not yet shipped.  
 **Reviewed:** 2026-11-28.
 
 ## 1. Product rule
@@ -244,6 +244,8 @@ Brand Otya as the independent engine/control plane, not as a cloud reseller or a
 
 ## 11. Current implementation status
 
-The existing Engine has no complete provider connection registry, credential vault, guided integration console, generic webhook service or production provider deployment manager. The current Cloudflare Worker adapter remains a preview/demo. The provider patterns in this document are target design, not shipped integrations.
+The existing Engine now has initial Rust metadata types for ProviderConnection, CredentialReference, ProviderResourceBinding and ProviderProjectGrant, including basic validation for identifiers, duplicate scopes, missing credential references, resource/project/environment matching and capability grants. These types hold secret references, not raw secret values. CI validation for this new code is pending.
+
+The Engine still has no persistent provider connection registry, credential vault or resolver, guided integration console, OAuth flow, generic webhook receiver, live provider API adapter or production provider deployment manager. The current Cloudflare Worker adapter remains a preview/demo. The provider patterns in this document are target design, not shipped integrations.
 
 Do not paste live provider credentials into the repository, public issue, logs or this documentation. No production resources or credentials are changed by this specification.
