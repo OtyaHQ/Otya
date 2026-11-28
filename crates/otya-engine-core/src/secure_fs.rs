@@ -1,13 +1,12 @@
 #![cfg(target_os = "linux")]
 
 use std::{
-    fs,
-    io,
+    fs, io,
     path::{Component, Path, PathBuf},
 };
 
 use rustix::{
-    fs::{fchmod, fstat, mkdirat, open, openat, Mode, OFlags},
+    fs::{Mode, OFlags, fchmod, fstat, mkdirat, open, openat},
     io::Errno,
     process::geteuid,
 };
@@ -28,7 +27,9 @@ pub struct PreparedDirectory {
 /// A filesystem path was unsafe or could not be prepared.
 #[derive(Debug, Error)]
 pub enum SecureFsError {
-    #[error("Otya per-user directories must not be provisioned as root; run as the installing unprivileged OS user")]
+    #[error(
+        "Otya per-user directories must not be provisioned as root; run as the installing unprivileged OS user"
+    )]
     RunningAsRoot,
     #[error("Otya directory path must be absolute: {0}")]
     PathNotAbsolute(PathBuf),
@@ -36,13 +37,17 @@ pub enum SecureFsError {
     UnsupportedPathComponent(PathBuf),
     #[error("Otya directory path has no final directory component: {0}")]
     MissingFinalComponent(PathBuf),
-    #[error("unsafe parent directory {path}: owner uid {owner_uid}, mode {mode:o}; parent directories must be owned by root or the current operator and must not be group/world writable (except root-owned sticky directories)")]
+    #[error(
+        "unsafe parent directory {path}: owner uid {owner_uid}, mode {mode:o}; parent directories must be owned by root or the current operator and must not be group/world writable (except root-owned sticky directories)"
+    )]
     UnsafeParent {
         path: PathBuf,
         owner_uid: u64,
         mode: u32,
     },
-    #[error("Otya directory {path} is owned by uid {actual_uid}, expected current effective uid {expected_uid}")]
+    #[error(
+        "Otya directory {path} is owned by uid {actual_uid}, expected current effective uid {expected_uid}"
+    )]
     WrongOwner {
         path: PathBuf,
         expected_uid: u64,
@@ -118,8 +123,7 @@ fn ensure_private_directory(
             Component::RootDir => continue,
             Component::Normal(name) => {
                 let is_final = components.peek().is_none();
-                let flags =
-                    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+                let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
 
                 let (next, created) = match openat(&current, name, flags, Mode::empty()) {
                     Ok(directory) => (directory, false),
@@ -132,28 +136,30 @@ fn ensure_private_directory(
                             }
                         }
 
-                        let directory = openat(&current, name, flags, Mode::empty())
-                            .map_err(|open_error| {
+                        let directory =
+                            openat(&current, name, flags, Mode::empty()).map_err(|open_error| {
                                 io_error("open newly created directory", path, open_error)
                             })?;
                         (directory, true)
                     }
-                    Err(error) => return Err(io_error("open directory without following symlinks", path, error)),
+                    Err(error) => {
+                        return Err(io_error(
+                            "open directory without following symlinks",
+                            path,
+                            error,
+                        ));
+                    }
                 };
 
-                let metadata = fstat(&next)
-                    .map_err(|error| io_error("inspect directory", path, error))?;
+                let metadata =
+                    fstat(&next).map_err(|error| io_error("inspect directory", path, error))?;
                 let mode = metadata.st_mode;
                 let owner_uid = u64::from(metadata.st_uid);
 
                 // DIRECTORY plus O_NOFOLLOW must yield a directory, but keep
                 // an explicit type check so this invariant is visible here.
                 if mode & 0o170000 != 0o040000 {
-                    return Err(io_error(
-                        "validate directory type",
-                        path,
-                        Errno::NOTDIR,
-                    ));
+                    return Err(io_error("validate directory type", path, Errno::NOTDIR));
                 }
 
                 if is_final {
@@ -167,8 +173,9 @@ fn ensure_private_directory(
                     }
 
                     if mode & 0o7777 != 0o700 {
-                        fchmod(&next, Mode::from_raw_mode(0o700))
-                            .map_err(|error| io_error("set private directory permissions", path, error))?;
+                        fchmod(&next, Mode::from_raw_mode(0o700)).map_err(|error| {
+                            io_error("set private directory permissions", path, error)
+                        })?;
                         final_hardened = true;
                     }
                     final_created = created;
@@ -250,7 +257,8 @@ mod tests {
 
         let root = temporary_root("nested");
         let target = root.join("operator").join("otya-engine");
-        let first = ensure_private_directory("data", &target).expect("directory should be created");
+        let first =
+            ensure_private_directory("data", &target).expect("directory should be created");
         assert!(first.created);
         assert_eq!(
             fs::metadata(&target)
@@ -261,8 +269,8 @@ mod tests {
             0o700
         );
 
-        let second =
-            ensure_private_directory("data", &target).expect("existing directory should validate");
+        let second = ensure_private_directory("data", &target)
+            .expect("existing directory should validate");
         assert!(!second.created);
         assert!(!second.permissions_hardened);
 
@@ -281,8 +289,8 @@ mod tests {
         fs::set_permissions(&target, fs::Permissions::from_mode(0o755))
             .expect("test permissions should be set");
 
-        let report =
-            ensure_private_directory("config", &target).expect("owned directory should be hardened");
+        let report = ensure_private_directory("config", &target)
+            .expect("owned directory should be hardened");
         assert!(report.permissions_hardened);
         assert_eq!(
             fs::metadata(&target)
