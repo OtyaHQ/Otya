@@ -216,8 +216,7 @@ fn initialize_or_verify_schema(
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Exclusive)?;
     let application_id: i64 =
         transaction.query_row("PRAGMA application_id", [], |row| row.get(0))?;
-    let schema_version: i64 =
-        transaction.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    let schema_version: i64 = transaction.query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
     if application_id == 0 && schema_version == 0 {
         let user_objects: i64 = transaction.query_row(
@@ -244,11 +243,7 @@ fn initialize_or_verify_schema(
             (i64::from(SQLITE_SCHEMA_VERSION), INITIAL_MIGRATION_ID),
         )?;
         transaction.pragma_update(None, "application_id", SQLITE_APPLICATION_ID)?;
-        transaction.pragma_update(
-            None,
-            "user_version",
-            i64::from(SQLITE_SCHEMA_VERSION),
-        )?;
+        transaction.pragma_update(None, "user_version", i64::from(SQLITE_SCHEMA_VERSION))?;
     } else {
         if application_id != SQLITE_APPLICATION_ID {
             return Err(SqliteStoreError::WrongApplicationId(application_id));
@@ -327,7 +322,12 @@ mod tests {
         let store = SqliteStore::open(&database).expect("database should be initialized");
         assert_eq!(store.path(), database);
         assert_eq!(store.schema_version().expect("version should read"), 1);
-        assert!(store.integrity_check().expect("integrity check should run").is_ok());
+        assert!(
+            store
+                .integrity_check()
+                .expect("integrity check should run")
+                .is_ok()
+        );
         assert_eq!(
             fs::metadata(&database)
                 .expect("database metadata should be available")
@@ -378,11 +378,7 @@ mod tests {
 
         let count: i64 = store
             .transaction(|transaction| {
-                transaction.query_row(
-                    "SELECT COUNT(*) FROM sample_records",
-                    [],
-                    |row| row.get(0),
-                )
+                transaction.query_row("SELECT COUNT(*) FROM sample_records", [], |row| row.get(0))
             })
             .expect("read transaction should complete");
         assert_eq!(count, 1);
