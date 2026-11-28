@@ -1,3 +1,7 @@
+# Schema illustration only: the current branch does not ship a SQLite adapter
+# or transaction layer. Validation checks TOML shape, not backend availability.
+# For the safe embedded starter, use: otya config init
+
 schema_version = 1
 
 [engine]
