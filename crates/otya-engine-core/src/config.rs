@@ -40,11 +40,19 @@ impl EngineConfig {
 
         match &self.storage {
             StorageConfig::Memory => {
-                report.warning(
-                    "storage.volatile",
-                    "Memory storage loses all state when the process exits and cannot support durable workloads.",
-                    "Configure a customer-controlled persistent adapter before enabling jobs, audit or business modules.",
-                );
+                if self.engine.mode == ExecutionMode::UserService {
+                    report.error(
+                        "storage.volatile_service",
+                        "User-service mode requires durable storage; memory storage loses all state when the process exits.",
+                        "Configure a customer-controlled persistent adapter before enabling the user service.",
+                    );
+                } else {
+                    report.warning(
+                        "storage.volatile",
+                        "Memory storage loses all state when the process exits and cannot support durable workloads.",
+                        "Configure a customer-controlled persistent adapter before enabling jobs, audit or business modules.",
+                    );
+                }
             }
             StorageConfig::Sqlite {
                 path,
@@ -211,8 +219,9 @@ busy_timeout_ms = 5000
 
     #[test]
     fn rejects_company_tenant_and_user_identity_fields() {
-        let source = format!(
-            "{VALID}\ncompany_id = \"acme\"\ntenant_id = \"tenant-1\"\nuser_id = \"alice\"\n"
+        let source = VALID.replace(
+            "[engine]",
+            "company_id = \"acme\"\ntenant_id = \"tenant-1\"\nuser_id = \"alice\"\n[engine]",
         );
         assert!(parse_config(&source).is_err());
     }
@@ -243,10 +252,10 @@ mode = "user_service"
 backend = "memory"
 "#;
         let report = parse_config(source).expect("config should parse").validate();
-        assert!(report.is_valid());
+        assert!(!report.is_valid());
         assert!(report.diagnostics.iter().any(|item| {
-            item.code == "storage.volatile"
-                && item.severity == DiagnosticSeverity::Warning
+            item.code == "storage.volatile_service"
+                && item.severity == DiagnosticSeverity::Error
         }));
     }
 
