@@ -46,11 +46,11 @@ A product can also embed the Rust library directly where appropriate. Non-Rust a
 
 The first OEnd integration is tracked in [OEnd PR #418](https://github.com/OtyaHQ/OEnd/pull/418).
 
-It introduces a separate `oend-engine-preview` Worker with a private Service Binding to `otya-engine-edge-preview`. Its only route, `GET /_internal/engine/status`, is protected by a preview-only bearer secret and checks the Engine's non-sensitive health/version endpoints.
+It introduces a separate `oend-engine-preview` Worker with a private Service Binding to `otya-engine-edge-preview`. Its only route, `GET /_internal/engine/status`, is protected by a preview-only bearer secret and checks the Engine's health, version and non-sensitive `/capabilities` document, including the application API version.
 
 The canary:
 - proves private Worker-to-Worker connectivity;
-- tests the Engine runtime version contract and fail-closed behavior;
+- tests the Engine runtime, application API version, declared capability contract and fail-closed behavior;
 - does not accept customer or product requests;
 - does not read/write product data;
 - does not modify production Workers, service bindings, routes, DNS, domains, databases, queues or secrets.
@@ -72,7 +72,7 @@ OHub does not need to run an Engine instance merely because it documents Otya. F
 
 ## Runtime selection
 
-- **Cloudflare Workers/WebAssembly:** short request/response work and host-provided bindings. The current adapter is a health/version + read-only sample; it is not yet a production business API.
+- **Cloudflare Workers/WebAssembly:** short request/response work and host-provided bindings. The current adapter exposes health/version/capability metadata plus a read-only sample; it is not yet a production business API.
 - **Linux native library/service:** first full runtime for filesystem, SQLite and longer-running operations.
 - **OCI container/VPS:** later Linux deployment profile where a full process environment is needed.
 - **Other hosts:** add adapters only after host contract conformance tests exist.
