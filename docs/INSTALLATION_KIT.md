@@ -83,13 +83,14 @@ Current initial commands:
 - `otya paths --instance NAME`
 - `otya paths --create`
 - `otya paths --instance NAME --create --json`
+- `otya config init [--instance NAME] [--json]`
 - `otya config validate --file FILE`
 
-The paths command is read-only by default. An explicit `--create` action prepares owner-only directories for the selected local installation. On Linux this operation refuses root execution, rejects symlinked path components and unsafe parent directories, verifies final-directory ownership and applies mode 0700. It does not write or overwrite configuration files.
+The paths command is read-only by default. An explicit `--create` action prepares owner-only directories for the selected local installation. On Linux this operation refuses root execution, rejects symlinked path components and unsafe parent directories, verifies final-directory ownership and applies mode 0700. It does not write or overwrite configuration files. Separately, `otya config init` prepares only the config directory and exclusively creates `otya-engine.toml` with mode 0600. It refuses to overwrite any existing file (including a symlink) and does not follow symlinked parent components. See [Configuration Lifecycle](CONFIGURATION_LIFECYCLE.md).
 
 Planned commands, not yet implemented:
 - install with embedded or service mode
-- safe config init and config migration
+- atomic config replacement, backups and schema migration
 - service install, start, stop, restart and status
 - logs
 - modules list, inspect, enable and disable
