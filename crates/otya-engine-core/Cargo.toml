@@ -1,0 +1,12 @@
+[package]
+name = "otya-engine-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Embeddable Rust core for the independently operated Otya Engine"
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
