@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="A small website powered by an application built on Otya Engine.">
+  <title>Otya Example Catalog</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #f3f6fb; color: #152235; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    header { padding: 3.5rem max(1.25rem, calc((100vw - 960px) / 2)); color: white; background: #101827; }
+    header p { color: #b9c7d9; max-width: 46rem; line-height: 1.6; }
+    .eyebrow { color: #8ed8c5; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    main { width: min(960px, calc(100% - 2rem)); margin: 2rem auto 4rem; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .status { color: #52647b; font-size: .9rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; margin-top: 1.25rem; }
+    article { background: white; border: 1px solid #dfe6ef; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 8px 26px #1b2e4610; }
+    article small { color: #327d70; font-weight: 700; }
+    article p { color: #52647b; line-height: 1.55; }
+    footer { margin-top: 2.5rem; color: #66768a; font-size: .85rem; }
+    code { background: #e8eef6; border-radius: .3rem; padding: .15rem .35rem; }
+    button { border: 0; border-radius: .6rem; padding: .7rem 1rem; color: white; background: #236c60; font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid #7ccfc0; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">An application built on Otya Engine</div>
+    <h1>Example Catalog</h1>
+    <p>This small website is a separate application. Otya provides the reusable application contract and headless API; this page owns its own presentation and calls that API over HTTPS.</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <div>
+        <h2>Sample items</h2>
+        <div class="status" id="status" role="status" aria-live="polite">Loading catalogue from the Otya application API…</div>
+      </div>
+      <button id="reload" type="button">Reload catalogue</button>
+    </div>
+    <section class="grid" id="items" aria-label="Example catalogue items"></section>
+    <footer>
+      Demonstration only. These are static sample records, not a live shop, inventory or transaction service.
+      API: <code>GET /api/v1/catalog/items</code>
+    </footer>
+  </main>
+  <script>
+    const status = document.getElementById("status");
+    const grid = document.getElementById("items");
+    async function loadCatalog() {
+      status.textContent = "Loading catalogue…";
+      grid.replaceChildren();
+      try {
+        const response = await fetch("/api/v1/catalog/items", {
+          headers: { "accept": "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("The catalogue API returned " + response.status + ".");
+        const data = await response.json();
+        for (const item of data.items || []) {
+          const card = document.createElement("article");
+          const category = document.createElement("small");
+          category.textContent = item.category;
+          const title = document.createElement("h3");
+          title.textContent = item.title;
+          const description = document.createElement("p");
+          description.textContent = item.description;
+          card.append(category, title, description);
+          grid.append(card);
+        }
+        status.textContent = (data.items || []).length + " demonstration items loaded from the Otya-powered API.";
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : "Unable to load the catalogue.";
+      }
+    }
+    document.getElementById("reload").addEventListener("click", loadCatalog);
+    loadCatalog();
+  </script>
+</body>
+</html>
