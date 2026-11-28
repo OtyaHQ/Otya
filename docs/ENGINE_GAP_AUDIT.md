@@ -21,7 +21,7 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-At Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062), commit `cb3d33e29e6de51ea13ee92ef3587782d1eec2fd`, the branch contains:
+At Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`, the branch contains:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
@@ -34,9 +34,9 @@ At Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624
 - tests for default paths, overrides, instance separation, unsafe instance names, directory create/idempotency, mode hardening, symlink rejection, unsafe parent rejection, private-file mode, existing-file refusal and invalid file names;
 - stable Rust formatting, Clippy, unit tests, CLI config-init/no-overwrite smoke checks, generated/example config validation and release build;
 - Rust 1.85 minimum-version compile and test pass.
-- An initial Linux-only SQLite adapter crate, tested on system SQLite, with private-file checks, Otya application/schema metadata, exclusive metadata initialization, WAL, explicit transactions, rollback and integrity-check tests (CI baseline run 175).
+- An initial Linux-only SQLite adapter crate tested against the host system SQLite library, with private-file/no-follow checks, Otya application/schema metadata, exclusive metadata initialization, WAL, bounded busy timeout, explicit transactions, rollback, integrity checks, database reopen, read-only file hardening and foreign-database content-preservation tests. The full current branch run passed these checks (run 193).
 
-The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. The create-only initializer does not update existing files, replace configs atomically, create databases or implement migrations.
+The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution/SQLite-version matrix or physical-host installation tests. The config initializer does not update existing files or replace configs atomically; the SQLite adapter currently creates only its initial metadata schema, not application business tables or a general migration system.
 
 ## Gap register
 
@@ -49,7 +49,7 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
-| Storage | Initial Linux-only SQLite adapter foundation is implemented; run 175 passed its initial open/WAL/identity/transaction/integrity tests. No generic storage trait exists yet. | Generic storage/transaction contract, module schemas, general migrations/locks/recovery, online backup/restore, crash/disk-full/stress tests, and optional customer-managed PostgreSQL adapter |
+| Storage | Initial Linux-only SQLite adapter foundation is implemented and full workspace CI passed on run 193. No generic storage trait exists yet. | Generic storage/transaction contract, module schemas, general migrations/locks/recovery, online backup/restore, crash/disk-full/stress tests, and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
