@@ -16,10 +16,11 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 
 - [x] Rust workspace with core and CLI crates, pinned stable channel and declared MSRV.
 - [x] Strict versioned TOML configuration and local CLI version/doctor/config validation.
+- [x] Linux XDG path-name resolution and read-only CLI paths command, with unit tests and CI smoke test.
 - [ ] Embedded library is the primary artifact with stable public API.
-- [ ] XDG path resolution for per-operator config, data, state, cache and runtime directories (implementation added; current-head CI pending).
 - [ ] CLI doctor validates actual filesystem ownership, permissions, symlink risk, disk space and host prerequisites.
 - [ ] Secure directory creation, atomic configuration writes and safe installation roots.
+- [ ] Explicit installation-root override for multiple isolated instances under one OS user.
 - [ ] Optional per-user service with owner-only local IPC.
 - [ ] CLI for install, status, logs, service lifecycle and self-test.
 - [ ] Installer preflight for OS, architecture, storage, memory and permissions.
