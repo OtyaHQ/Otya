@@ -17,7 +17,10 @@ pub use config::{
     ConfigDiagnostic, ConfigError, DiagnosticSeverity, EngineConfig, EngineRuntimeConfig,
     ExecutionMode, StorageConfig, ValidationReport, parse_config,
 };
-pub use paths::{EnginePaths, PathDiagnostic, PathResolutionError, discover_engine_paths};
+pub use paths::{
+    EnginePaths, PathDiagnostic, PathResolutionError, discover_engine_paths,
+    discover_engine_paths_for,
+};
 
 #[cfg(target_os = "linux")]
 pub use secure_fs::{PreparedDirectory, SecureFsError, prepare_engine_directories};
