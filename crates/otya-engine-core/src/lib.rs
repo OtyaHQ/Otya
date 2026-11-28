@@ -9,6 +9,7 @@
 
 mod config;
 mod paths;
+mod provider;
 mod storage;
 
 #[cfg(target_os = "linux")]
@@ -22,6 +23,11 @@ pub use config::{
 pub use paths::{
     EnginePaths, PathDiagnostic, PathResolutionError, discover_engine_paths,
     discover_engine_paths_for,
+};
+pub use provider::{
+    CredentialReference, CredentialStore, ProjectEnvironment, ProviderAuthMethod,
+    ProviderConnection, ProviderKind, ProviderModelError, ProviderProjectGrant,
+    ProviderResourceBinding,
 };
 pub use storage::{
     MAX_STORAGE_KEY_BYTES, MAX_STORAGE_NAMESPACE_BYTES, MAX_STORAGE_SCAN_LIMIT,
