@@ -29,6 +29,11 @@ The current engine and mobile portability foundations passed Otya Engine CI [run
 - Linux XDG path resolution for config, data, state, cache and optional runtime directories;
 - named local instance path separation and validation;
 - explicit private-directory preparation via safe rustix directory-descriptor operations;
+- core storage/transaction contract with bounded namespaced key/value operations and prefix scans;
+- Linux SQLite adapter implementing the core contract, initial v1-to-v2 schema migration, WAL and rollback-on-drop;
+- explicit `otya storage init` and non-creating `otya storage check` commands;
+- phone-first Codespaces devcontainer and remote developer workflow documentation;
+- mobile portability CI that compiles the portable core for Android arm64/armv7/x86_64 and WebAssembly;
 - no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
 - Linux create-only config initialization that writes `otya-engine.toml` with mode 0600 inside a verified directory; existing files and symlinks are never followed or overwritten;
 - tests for default paths, overrides, instance separation, unsafe instance names, directory create/idempotency, mode hardening, symlink rejection, unsafe parent rejection, private-file mode, existing-file refusal and invalid file names;
@@ -49,7 +54,7 @@ The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux r
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
-| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions and initial v1-to-v2 schema migration are implemented; latest integration CI is pending | Adapter conformance across backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
+| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions, initial v1-to-v2 migration and CLI smoke flow passed CI run 265 on Linux | Adapter conformance across backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
