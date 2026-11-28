@@ -168,12 +168,7 @@ impl ValidationReport {
         });
     }
 
-    fn warning(
-        &mut self,
-        code: &str,
-        message: impl Into<String>,
-        remediation: impl Into<String>,
-    ) {
+    fn warning(&mut self, code: &str, message: impl Into<String>, remediation: impl Into<String>) {
         self.diagnostics.push(ConfigDiagnostic {
             severity: DiagnosticSeverity::Warning,
             code: code.to_owned(),
@@ -251,11 +246,12 @@ mode = "user_service"
 [storage]
 backend = "memory"
 "#;
-        let report = parse_config(source).expect("config should parse").validate();
+        let report = parse_config(source)
+            .expect("config should parse")
+            .validate();
         assert!(!report.is_valid());
         assert!(report.diagnostics.iter().any(|item| {
-            item.code == "storage.volatile_service"
-                && item.severity == DiagnosticSeverity::Error
+            item.code == "storage.volatile_service" && item.severity == DiagnosticSeverity::Error
         }));
     }
 
@@ -280,7 +276,9 @@ busy_timeout_ms = 5000
             "path = \"/home/test/.local/share/otya-engine/engine.db\"",
             "path = \"./var/otya-engine.db\"",
         );
-        let report = parse_config(&source).expect("config should parse").validate();
+        let report = parse_config(&source)
+            .expect("config should parse")
+            .validate();
         assert!(!report.is_valid());
     }
 
