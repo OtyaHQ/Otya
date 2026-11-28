@@ -2,7 +2,7 @@
 
 **Otya is an independently installable, customer-operated systems engine and reusable integration kit.**
 
-Otya is designed to be installed into the environment of the person or organization using it. It is not an Otya-hosted backend, cloud service, mandatory database, identity provider or programming language. The customer owns the machine, operating system, data, provider accounts, credentials, backups, network, configuration and day-to-day operation.
+Otya is installed and operated independently by the person who installs it. Each installation belongs to one operator and one OS-user boundary. It is not a shared multi-tenant service: the engine has no company registration, tenant IDs, end-user directory, central customer registry or remote installation heartbeat. The host application owns its own users and business identities. The operator owns the machine, operating system, data, provider accounts, credentials, backups, network and configuration.
 
 The engine is bootstrapped and maintained in Rust. Applications can embed its libraries or use its optional local service and operator CLI. It must remain useful without an Otya cloud account or a connection to Otya infrastructure.
 
@@ -33,7 +33,7 @@ Otya is not a media player and does not copy Media Kit's code. We are adopting t
 ## Operating modes
 
 1. **Embedded mode (primary):** a host application links the Otya Rust library through Rust APIs or supported FFI bindings. No daemon or public network listener is required.
-2. **Local service mode (optional):** a customer runs an Otya service for scheduled jobs, webhook intake, integration delivery and multiple local applications. Local IPC is the default; network exposure is an explicit operator decision.
+2. **Per-user service mode (optional):** the installing OS user runs one local Otya service for that user's trusted applications. Local IPC is owner-only by default. It is not a shared service for unrelated OS users; another OS user installs a separate instance.
 3. **Customer-hosted mode (optional):** the customer chooses to run the engine on their own server or infrastructure. Otya does not host it or operate the customer's environment.
 
 All modes share the same engine core and versioned contracts.
@@ -90,6 +90,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [Engine architecture](docs/ARCHITECTURE.md)
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
+- [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
+- [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
 - [Reliability, backup and recovery](docs/ENGINE_RELIABILITY_MODEL.md)
 - [Modules and provider adapters](docs/MODULES_AND_ADAPTERS.md)
 - [Media Kit design lessons](docs/MEDIA_KIT_DESIGN_LESSONS.md)
