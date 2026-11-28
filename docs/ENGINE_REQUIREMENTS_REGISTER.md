@@ -93,9 +93,11 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 - [x] Request/response bounds, safe canonical path validation and standard JSON error responses.
 - [x] Example stateless catalog application with route-level tests.
 - [x] Responsive static website example calling the application API through the Cloudflare Worker adapter.
-- [ ] Production-ready credential/session verification and host authorization adapters; caller context is only trustworthy when constructed by a verified host.
+- [ ] Production-ready installation-owned identity provider, OIDC/OAuth client and host authorization adapter; caller context is only trustworthy when constructed by a verified host.
 - [ ] Async application handlers and request-body forwarding, middleware, route parameters and streaming APIs.
-- [ ] Second independent host adapter and HTTP end-to-end conformance tests.
+- [ ] Language-neutral authenticated HTTPS/JSON API with published OpenAPI descriptions and a second independent host adapter.
+- [ ] External developers can use released contracts from TypeScript, Python, Go, Java, .NET, PHP, Ruby and other languages without an Otya-hosted account.
+- [ ] SDK versioning and generated client conformance tests.
 - [ ] Application scaffolder, starter templates, package signatures, migrations and upgrade/rollback lifecycle.
 - [ ] Durable storage and operations contracts for apps that need persistent state or background work.
 
@@ -115,9 +117,9 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 
 - [ ] Threat model and privilege boundary documented.
 - [ ] Default-deny module capabilities.
-- [ ] Host application owns end-user authentication and authorization.
+- [ ] Applications may use installation-owned authentication while retaining product-specific resource authorization and business permissions.
 - [ ] Local operator control protected by OS permissions and authenticated local IPC.
-- [ ] Secret references and secret-store adapter; no raw secrets in config/logs.
+- [ ] Local credential vault and provider-specific secret-store adapters; no raw secrets in config/logs or frontend builds.
 - [ ] Webhook signature, freshness, replay and size checks.
 - [ ] Local IPC file/socket permissions tested.
 - [ ] TLS and safe outbound network defaults for remote adapters.
