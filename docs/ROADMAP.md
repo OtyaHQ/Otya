@@ -118,18 +118,40 @@ Exit gate: failure-injection tests prove no silent data loss, duplicate unsafe s
 
 ## E5 — Security and access control
 
-**Goal:** protect local and remote boundaries without building an identity SaaS.
+**Goal:** protect the operator's private installation, identity realm, projects and service boundaries without creating a shared Otya-hosted identity SaaS.
 
 Deliverables:
 - OS-principal-aware local operator boundary and authenticated local IPC where required.
 - Module capability grants, least privilege and default-deny operation checks.
-- A narrow host-authorization context contract; the host app remains responsible for authenticating and authorizing its users.
+- A per-installation identity provider and authentication contract; host applications remain responsible for product-specific resource authorization.
+- Secure local user/group directory, invitation and account-recovery model.
+- OIDC/OAuth 2.0 issuer, client registration, audiences, scopes, JWKS and signing-key rotation.
+- Passkeys/WebAuthn, TOTP MFA, session lifecycle and revocation.
+- Machine identities and service-to-service authentication.
+- Optional external OIDC/SAML federation, never required for local operation.
+- Installation/workspace/project/component-scoped role and capability policies.
 - Secret-provider interface and credential redaction.
 - Signed webhook verification and replay protection.
 - Key rotation hooks and encrypted backup support.
 - Dependency audit, SBOM, signing and vulnerability process.
 
-Exit gate: threat model reviewed; local IPC and capability tests pass; host-authorization context cannot silently become a central user or tenant directory; privileged code receives security review.
+Exit gate: threat model reviewed; independent installations have disjoint identities and signing keys; authentication, account recovery, MFA, session revocation and key rotation tests pass; app-specific permissions cannot be bypassed by successful sign-in; privileged code receives security review.
+
+## E5.5 — Installation-owned identity and access platform
+
+**Goal:** give each operator a complete private login and identity service, with no shared Otya user directory.
+
+Deliverables:
+- Local identity realm, user/group directory, branded login and recovery portal.
+- OIDC/OAuth 2.0 provider endpoints and client registration for selected applications.
+- Password, passkey/WebAuthn and TOTP MFA flows using reviewed libraries.
+- Secure sessions, device/session management, revocation, key rotation and JWKS.
+- Installation/workspace/project roles and audited capability grants.
+- Workload identity and machine-to-machine credentials.
+- Optional external OIDC/SAML federation.
+- Explicit separation of authentication from application-owned authorization.
+
+Exit gate: two clean installations have disjoint user stores, issuer identifiers, signing keys and sessions; applications reject wrong issuer/audience/scope; recovery, MFA and revocation have independent security review.
 
 ## E6 — Provider adapter framework
 
@@ -162,12 +184,28 @@ Deliverables:
 
 Exit gate: the same app contract is tested through at least two distinct host adapters; authentication is verified by the host, capabilities are not caller-spoofable, and storage/operations are durable where the app requires them.
 
+## E7.5 — Operator console, UI kit and guided application building
+
+**Goal:** make common platform administration and application setup accessible to non-developers without hiding source, policy or operational consequences.
+
+Deliverables:
+- Responsive browser-based console backed by the same authenticated management API as the CLI.
+- First-run setup, owner bootstrap, member invitations, access reviews and guided service configuration.
+- Reusable accessible design system, theming, localization, navigation, form, table, dialog and dashboard components.
+- First-party sign-in/account components connected to the installation identity service.
+- Business portal, internal tool, media and generic app starter templates.
+- Schema-driven forms and workflow/approval builders for bounded use cases.
+- Exportable and reviewable configuration; visual edits must produce versioned plans/diffs.
+- Clear operator, project-admin, developer, support and end-user experiences.
+
+Exit gate: non-developers can complete common member, policy, service, health and deployment tasks without the CLI; generated UI still enforces server-side authorization; all changes are auditable and exportable.
+
 ## E8 — First business modules
 
 **Goal:** prove that reusable infrastructure supports real domain workflows.
 
 Prioritized modules:
-- identity integration boundary (not a new mandatory identity provider);
+- identity integration contracts and reusable identity-aware modules; the installation-owned identity provider is specified in E5.5;
 - communications and notifications;
 - organization, staff, roles and approvals;
 - accounting ledger and audit;
