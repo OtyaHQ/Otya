@@ -243,7 +243,7 @@ busy_timeout_ms = 5000
     }
 
     #[test]
-    fn warns_when_memory_storage_is_selected() {
+    fn rejects_memory_storage_for_user_service() {
         let source = r#"
 schema_version = 1
 [engine]
