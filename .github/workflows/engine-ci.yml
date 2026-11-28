@@ -62,6 +62,28 @@ jobs:
           AFTER_HASH="$(sha256sum "$CONFIG_FILE" | cut -d ' ' -f 1)"
           test "$BEFORE_HASH" = "$AFTER_HASH"
 
+      - name: Exercise optional SQLite storage adapter
+        run: |
+          STORAGE_DIR="${RUNNER_TEMP}/otya-storage-smoke"
+          mkdir -p "$STORAGE_DIR"
+          chmod 700 "$STORAGE_DIR"
+          STORAGE_CONFIG="${RUNNER_TEMP}/otya-storage-smoke.toml"
+          STORAGE_DB_PATH="$STORAGE_DIR/engine.db"
+          cat > "$STORAGE_CONFIG" <<EOF
+          schema_version = 1
+          [engine]
+          mode = "embedded"
+          [storage]
+          backend = "sqlite"
+          path = "$STORAGE_DB_PATH"
+          busy_timeout_ms = 5000
+          EOF
+          chmod 600 "$STORAGE_CONFIG"
+          cargo run -p otya-engine-cli -- storage init --config "$STORAGE_CONFIG" --json
+          cargo run -p otya-engine-cli -- storage check --config "$STORAGE_CONFIG" --json
+          test -f "$STORAGE_DB_PATH"
+          test "$(stat -c '%a' "$STORAGE_DB_PATH")" = "600"
+
       - name: Validate example configuration
         run: cargo run -p otya-engine-cli -- config validate --file examples/otya-engine.toml
 
