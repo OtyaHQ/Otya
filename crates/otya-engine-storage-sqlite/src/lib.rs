@@ -627,8 +627,8 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use otya_engine_core::{Storage, StorageError, StorageTransaction};
     use super::*;
+    use otya_engine_core::{Storage, StorageError, StorageTransaction};
 
     fn root_user() -> bool {
         rustix::process::geteuid().is_root()
@@ -822,7 +822,7 @@ mod tests {
         }
         let data_dir = temporary_root("transactions");
         create_data_dir(&data_dir);
-        let mut store = SqliteStore::open(data_dir.join("engine.db"))
+        let store = SqliteStore::open(data_dir.join("engine.db"))
             .expect("database should open");
 
         store
@@ -944,14 +944,22 @@ mod tests {
 
         {
             let mut transaction =
-                Storage::begin(&mut store).expect("storage transaction should begin");
-            transaction.put("payments.records", b"record-2", b"two").unwrap();
-            transaction.put("payments.records", b"record-1", b"one").unwrap();
-            transaction.put("media.items", b"record-1", b"other namespace").unwrap();
-            transaction.commit().expect("storage transaction should commit");
+                Storage::begin(&store).expect("storage transaction should begin");
+            transaction
+                .put("payments.records", b"record-2", b"two")
+                .unwrap();
+            transaction
+                .put("payments.records", b"record-1", b"one")
+                .unwrap();
+            transaction
+                .put("media.items", b"record-1", b"other namespace")
+                .unwrap();
+            transaction
+                .commit()
+                .expect("storage transaction should commit");
         }
 
-        let mut transaction = Storage::begin(&mut store).expect("read transaction should begin");
+        let mut transaction = Storage::begin(&store).expect("read transaction should begin");
         let entries = transaction
             .scan_prefix("payments.records", b"record-", 10)
             .expect("prefix scan should succeed");
@@ -964,15 +972,19 @@ mod tests {
         );
         assert!(transaction.delete("payments.records", b"record-1").unwrap());
         assert!(!transaction.delete("payments.records", b"missing").unwrap());
-        transaction.commit().expect("transaction should commit");
+        transaction
+            .commit()
+            .expect("transaction should commit");
 
-        let mut verify = Storage::begin(&mut store).expect("verification transaction should begin");
+        let mut verify = Storage::begin(&store).expect("verification transaction should begin");
         assert_eq!(verify.get("payments.records", b"record-1").unwrap(), None);
         assert_eq!(
             verify.get("media.items", b"record-1").unwrap(),
             Some(b"other namespace".to_vec())
         );
-        verify.commit().expect("verification transaction should commit");
+        verify
+            .commit()
+            .expect("verification transaction should commit");
         drop(store);
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
@@ -987,10 +999,10 @@ mod tests {
         let database = data_dir.join("engine.db");
         let mut store = SqliteStore::open(&database).expect("database should initialize");
         {
-            let mut transaction = Storage::begin(&mut store).expect("transaction should begin");
+            let mut transaction = Storage::begin(&store).expect("transaction should begin");
             transaction.put("test.rollback", b"key", b"value").unwrap();
         }
-        let mut verify = Storage::begin(&mut store).expect("verification transaction should begin");
+        let mut verify = Storage::begin(&store).expect("verification transaction should begin");
         assert_eq!(verify.get("test.rollback", b"key").unwrap(), None);
         verify.commit().expect("verification transaction should commit");
         drop(store);
@@ -1007,18 +1019,24 @@ mod tests {
         let database = data_dir.join("engine.db");
         {
             let legacy = Connection::open(&database).expect("legacy database should open");
-            legacy.execute_batch(
-                "CREATE TABLE otya_engine_migrations (
-                    version INTEGER PRIMARY KEY CHECK (version > 0),
-                    migration_id TEXT NOT NULL UNIQUE,
-                    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                 );",
-            ).unwrap();
-            legacy.execute(
-                "INSERT INTO otya_engine_migrations (version, migration_id) VALUES (1, ?1)",
-                [INITIAL_MIGRATION_ID],
-            ).unwrap();
-            legacy.pragma_update(None, "application_id", SQLITE_APPLICATION_ID).unwrap();
+            legacy
+                .execute_batch(
+                    "CREATE TABLE otya_engine_migrations (
+                        version INTEGER PRIMARY KEY CHECK (version > 0),
+                        migration_id TEXT NOT NULL UNIQUE,
+                        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                     );",
+                )
+                .unwrap();
+            legacy
+                .execute(
+                    "INSERT INTO otya_engine_migrations (version, migration_id) VALUES (1, ?1)",
+                    [INITIAL_MIGRATION_ID],
+                )
+                .unwrap();
+            legacy
+                .pragma_update(None, "application_id", SQLITE_APPLICATION_ID)
+                .unwrap();
             legacy.pragma_update(None, "user_version", 1_i64).unwrap();
         }
         let store = SqliteStore::open(&database).expect("schema v1 should migrate");
@@ -1040,6 +1058,4 @@ mod tests {
         assert!(!database.exists());
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
-
-
 }
