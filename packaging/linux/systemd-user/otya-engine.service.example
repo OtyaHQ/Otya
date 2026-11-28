@@ -1,0 +1,24 @@
+[Unit]
+Description=Otya Engine (per-user local service)
+Documentation=https://github.com/OtyaHQ/Otya
+After=default.target
+
+[Service]
+Type=simple
+# Illustrative only: the service executable is not yet implemented.
+ExecStart=%h/.local/bin/otya-engine-service --config %h/.config/otya-engine/engine.toml
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0077
+NoNewPrivileges=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Do not add ProtectSystem/ProtectHome or namespace options here without
+# validating support in the target distribution's systemd user manager.
+# Application paths, socket ownership and storage permissions are enforced
+# by the engine itself and verified in platform-specific tests.
+
+[Install]
+WantedBy=default.target
