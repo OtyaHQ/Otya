@@ -10,12 +10,15 @@ pub fn parse_config(source: &str) -> Result<EngineConfig, ConfigError> {
     toml::from_str(source).map_err(ConfigError::from)
 }
 
-/// Top-level customer-owned engine configuration.
+/// Configuration for one operator-owned local engine installation.
+///
+/// There are deliberately no company, tenant, customer, or end-user fields here.
+/// A host application owns its own identity and account model.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EngineConfig {
     pub schema_version: u32,
-    pub instance: InstanceConfig,
+    pub engine: EngineRuntimeConfig,
     pub storage: StorageConfig,
 }
 
@@ -35,25 +38,6 @@ impl EngineConfig {
             );
         }
 
-        let raw_id = self.instance.id.as_str();
-        let id = raw_id.trim();
-        let valid_id = raw_id == id
-            && !id.is_empty()
-            && id.len() <= 64
-            && id.as_bytes()[0].is_ascii_alphanumeric()
-            && id
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
-            && !id.contains("..");
-
-        if !valid_id {
-            report.error(
-                "config.invalid_instance_id",
-                "Instance ID must be 1–64 ASCII letters, digits, dots, underscores or hyphens; it must start with a letter or digit and cannot contain '..'.",
-                "Choose a stable, non-secret instance identifier.",
-            );
-        }
-
         match &self.storage {
             StorageConfig::Memory => {
                 report.warning(
@@ -67,11 +51,11 @@ impl EngineConfig {
                 busy_timeout_ms,
             } => {
                 if path.as_os_str().is_empty() || path.as_path() == Path::new(":memory:") {
-                    if self.instance.mode == InstanceMode::Service {
+                    if self.engine.mode == ExecutionMode::UserService {
                         report.error(
                             "storage.sqlite_not_durable",
-                            "An in-memory SQLite database is not accepted for service mode.",
-                            "Use a file-backed database in a customer-controlled directory or select another supported persistent adapter.",
+                            "An in-memory SQLite database is not accepted for user-service mode.",
+                            "Use a file-backed database in the operator's data directory or select another supported persistent adapter.",
                         );
                     } else {
                         report.warning(
@@ -96,22 +80,21 @@ impl EngineConfig {
     }
 }
 
-/// Local installation mode.
+/// Local execution mode for one operator-owned installation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum InstanceMode {
+pub enum ExecutionMode {
     /// The host application owns the process lifecycle.
     Embedded,
-    /// The customer explicitly runs the optional local service.
-    Service,
+    /// One optional service running as the installing OS user.
+    UserService,
 }
 
-/// Customer-defined instance identity and mode.
+/// Runtime settings for the locally installed engine.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct InstanceConfig {
-    pub id: String,
-    pub mode: InstanceMode,
+pub struct EngineRuntimeConfig {
+    pub mode: ExecutionMode,
 }
 
 /// Storage selection. No cloud database or credentials are implied.
@@ -120,7 +103,7 @@ pub struct InstanceConfig {
 pub enum StorageConfig {
     /// Volatile storage, useful only for tests and ephemeral work.
     Memory,
-    /// Optional customer-owned, file-backed SQLite store.
+    /// Optional operator-owned, file-backed SQLite store.
     Sqlite {
         path: PathBuf,
         #[serde(default = "default_busy_timeout_ms")]
@@ -199,8 +182,7 @@ mod tests {
     const VALID: &str = r#"
 schema_version = 1
 
-[instance]
-id = "customer-main"
+[engine]
 mode = "embedded"
 
 [storage]
@@ -210,7 +192,7 @@ busy_timeout_ms = 5000
 "#;
 
     #[test]
-    fn parses_valid_customer_configuration() {
+    fn parses_valid_single_operator_configuration() {
         let config = parse_config(VALID).expect("valid config should parse");
         assert!(config.validate().is_valid());
     }
@@ -222,6 +204,23 @@ busy_timeout_ms = 5000
     }
 
     #[test]
+    fn rejects_company_tenant_and_user_identity_fields() {
+        let source = format!(
+            "{VALID}\ncompany_id = \"acme\"\ntenant_id = \"tenant-1\"\nuser_id = \"alice\"\n"
+        );
+        assert!(parse_config(&source).is_err());
+    }
+
+    #[test]
+    fn rejects_identity_fields_inside_engine_settings() {
+        let source = VALID.replace(
+            "[engine]",
+            "[engine]\ninstallation_id = \"vendor-tracking-id\"",
+        );
+        assert!(parse_config(&source).is_err());
+    }
+
+    #[test]
     fn rejects_unsupported_schema() {
         let mut config = parse_config(VALID).expect("valid config should parse");
         config.schema_version = 99;
@@ -229,19 +228,11 @@ busy_timeout_ms = 5000
     }
 
     #[test]
-    fn rejects_invalid_instance_identifier() {
-        let mut config = parse_config(VALID).expect("valid config should parse");
-        config.instance.id = "../escape".to_owned();
-        assert!(!config.validate().is_valid());
-    }
-
-    #[test]
-    fn warns_when_service_uses_memory_storage() {
+    fn warns_when_memory_storage_is_selected() {
         let source = r#"
 schema_version = 1
-[instance]
-id = "local"
-mode = "service"
+[engine]
+mode = "user_service"
 [storage]
 backend = "memory"
 "#;
@@ -254,12 +245,11 @@ backend = "memory"
     }
 
     #[test]
-    fn rejects_in_memory_sqlite_for_service_mode() {
+    fn rejects_in_memory_sqlite_for_user_service_mode() {
         let source = r#"
 schema_version = 1
-[instance]
-id = "local"
-mode = "service"
+[engine]
+mode = "user_service"
 [storage]
 backend = "sqlite"
 path = ":memory:"
