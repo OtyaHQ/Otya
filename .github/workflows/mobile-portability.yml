@@ -1,4 +1,4 @@
-name: Otya Mobile and Web Portability
+name: Otya Portable Core Targets
 
 on:
   push:
