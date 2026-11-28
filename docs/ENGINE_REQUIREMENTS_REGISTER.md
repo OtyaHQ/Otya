@@ -68,6 +68,20 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 - [ ] Cloudflare Worker, Container and generic OCI runtime integration, lifecycle and recovery acceptance.
 - [ ] Provider-neutral deployment profiles so GitHub/Cloudflare remain optional, operator-owned tooling.
 
+## Application SDK and developer experience
+
+- [x] Versioned application API contract and static application manifest.
+- [x] Exact-path route registry with duplicate app/route rejection and engine API compatibility check.
+- [x] Public/authenticated route declarations, host-supplied verified caller context and declared capability checks.
+- [x] Request/response bounds, safe canonical path validation and standard JSON error responses.
+- [x] Example stateless catalog application with route-level tests.
+- [x] Responsive static website example calling the application API through the Cloudflare Worker adapter.
+- [ ] Production-ready credential/session verification and host authorization adapters; caller context is only trustworthy when constructed by a verified host.
+- [ ] Async application handlers and request-body forwarding, middleware, route parameters and streaming APIs.
+- [ ] Second independent host adapter and HTTP end-to-end conformance tests.
+- [ ] Application scaffolder, starter templates, package signatures, migrations and upgrade/rollback lifecycle.
+- [ ] Durable storage and operations contracts for apps that need persistent state or background work.
+
 ## Runtime and reliability
 
 - [ ] Durable job leases, bounded retries and backoff with jitter.
