@@ -61,6 +61,8 @@ The current Cloudflare Rust/WebAssembly adapter proves that the portable core ca
 
 A Cloudflare customer must deploy into their own account and bind their own resources. A Cloudflare Worker is not a general Linux server: it does not provide arbitrary local disk, process spawning or the full Linux service environment. A Linux host adapter is a separate runtime target.
 
+The .ot language is not yet an executable product language: the repository has a language specification and examples, but no production parser, compiler, package manager or runtime. Developers use the experimental Rust SDK today. The language can later become an additional application authoring frontend that compiles to the same stable Engine contracts; it must not be confused with the Engine runtime itself.
+
 ## What is actually usable today
 
 | Capability | Current evidence | Use boundary |
