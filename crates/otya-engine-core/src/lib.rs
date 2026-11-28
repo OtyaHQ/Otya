@@ -15,7 +15,8 @@ mod secure_fs;
 
 pub use config::{
     ConfigDiagnostic, ConfigError, DiagnosticSeverity, EngineConfig, EngineRuntimeConfig,
-    ExecutionMode, StorageConfig, ValidationReport, parse_config,
+    ExecutionMode, StorageConfig, ValidationReport, DEFAULT_CONFIG_FILE_NAME, parse_config,
+    starter_config_toml,
 };
 pub use paths::{
     EnginePaths, PathDiagnostic, PathResolutionError, discover_engine_paths,
@@ -23,7 +24,10 @@ pub use paths::{
 };
 
 #[cfg(target_os = "linux")]
-pub use secure_fs::{PreparedDirectory, SecureFsError, prepare_engine_directories};
+pub use secure_fs::{
+    PreparedDirectory, SecureFsError, create_private_file, prepare_engine_config_directory,
+    prepare_engine_directories,
+};
 
 /// Version of the configuration schema understood by this core release.
 pub const CONFIG_SCHEMA_VERSION: u32 = 1;
