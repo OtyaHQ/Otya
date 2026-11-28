@@ -35,8 +35,10 @@ impl EngineConfig {
             );
         }
 
-        let id = self.instance.id.trim();
-        let valid_id = !id.is_empty()
+        let raw_id = self.instance.id.as_str();
+        let id = raw_id.trim();
+        let valid_id = raw_id == id
+            && !id.is_empty()
             && id.len() <= 64
             && id.as_bytes()[0].is_ascii_alphanumeric()
             && id
@@ -54,13 +56,11 @@ impl EngineConfig {
 
         match &self.storage {
             StorageConfig::Memory => {
-                if self.instance.mode == InstanceMode::Service {
-                    report.warning(
-                        "storage.volatile_service",
-                        "Memory storage loses all state when the process exits and is unsuitable for durable service workloads.",
-                        "Configure a customer-controlled persistent adapter before enabling durable jobs, audit or business modules.",
-                    );
-                }
+                report.warning(
+                    "storage.volatile",
+                    "Memory storage loses all state when the process exits and cannot support durable workloads.",
+                    "Configure a customer-controlled persistent adapter before enabling jobs, audit or business modules.",
+                );
             }
             StorageConfig::Sqlite {
                 path,
@@ -248,7 +248,7 @@ backend = "memory"
         let report = parse_config(source).expect("config should parse").validate();
         assert!(report.is_valid());
         assert!(report.diagnostics.iter().any(|item| {
-            item.code == "storage.volatile_service"
+            item.code == "storage.volatile"
                 && item.severity == DiagnosticSeverity::Warning
         }));
     }
