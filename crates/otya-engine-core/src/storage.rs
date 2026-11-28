@@ -33,14 +33,20 @@ pub enum StorageError {
     Backend(String),
 }
 
-/// A storage backend for one operator-owned Otya installation.
+/// Backend-neutral storage for one operator-owned installation.
 ///
-/// Each call to `begin` starts an explicit transaction. A transaction is
-/// committed only by calling `commit`; dropping it first must roll back all
-/// writes. Implementations must make writes in one transaction atomic.
-pub trait Storage: Send + Sync {
+/// This is a generic Rust trait rather than a trait object because its
+/// transaction handle borrows the store. A host can keep one store per worker
+/// or protect access using its own synchronization strategy. Implementations
+/// must commit atomically and roll back when a transaction is dropped.
+pub trait Storage: Send {
+    /// Concrete transaction type borrowed from this store.
+    type Transaction<'store>: StorageTransaction
+    where
+        Self: 'store;
+
     /// Begin a write-capable transaction.
-    fn begin(&self) -> Result<Box<dyn StorageTransaction + '_>, StorageError>;
+    fn begin(&mut self) -> Result<Self::Transaction<'_>, StorageError>;
 
     /// Perform a bounded local health check without making network requests.
     fn health_check(&self) -> Result<(), StorageError>;
@@ -71,8 +77,5 @@ pub trait StorageTransaction {
     ) -> Result<Vec<StorageEntry>, StorageError>;
 
     /// Atomically commit all changes in this transaction.
-    fn commit(self: Box<Self>) -> Result<(), StorageError>;
-
-    /// Explicitly roll back all changes in this transaction.
-    fn rollback(self: Box<Self>) -> Result<(), StorageError>;
+    fn commit(self) -> Result<(), StorageError>;
 }
