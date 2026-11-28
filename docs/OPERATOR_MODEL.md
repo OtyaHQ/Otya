@@ -2,19 +2,20 @@
 
 ## Core rule
 
-One Otya Engine installation belongs to the person who installs and operates that installation. It is a local software component, not a hosted SaaS account and not a shared multi-tenant service.
+One Otya Engine installation belongs to one operator. The operator may be a person or an organization. The engine is a local software component, not a hosted SaaS account and not a shared multi-tenant service.
 
 The engine does not ask which company is using it, register customers, provision tenant spaces, create end-user accounts, count remote users or report installations to Otya. There is no built-in company ID, tenant ID or end-user directory in the engine core.
 
 The installer/operator is the owner of the local installation. The host application remains responsible for its own product users, accounts, permissions and business identity.
 
-## What "one installation" means
+## What one installation means
 
-- One installation has one operator-owned configuration and data root.
-- It runs inside the installing OS user's security boundary.
+- One installation has one operator-controlled configuration and data root.
+- It runs inside the selected OS security principal's boundary.
 - Its local database, credentials, logs, cache, runtime socket and backups belong to that installation.
-- A host application may embed the library in its own process, or the operator may enable one local user service.
+- A host application may embed the library, or the operator may enable one local service.
 - Other OS users do not automatically share the installation. They install and operate their own separate instance if they need it.
+- A server operator may explicitly select a dedicated unprivileged service account for one isolated installation.
 - The operator may deliberately create multiple isolated installations, but each has separate configuration, state, process/socket and storage. The engine never merges them into a tenant pool.
 
 A company or organization may choose to install and operate Otya for its own use. That does not turn the engine into a multi-tenant SaaS product. Its application data model is chosen by the host application or installed business module, not inferred or registered by the engine.
@@ -30,7 +31,7 @@ The engine core must not contain:
 - remote instance registration or a vendor-issued installation identity;
 - a central control plane, hosted database or remote kill switch.
 
-Local authentication to an optional management socket proves only which local OS user/process is connecting. It does not create an Otya user account. The engine's capability checks protect local engine operations; a host application must authorize its own end users.
+Local authentication to an optional management socket proves only which local OS principal is connecting. It does not create an Otya user account. The engine's capability checks protect local engine operations; a host application must authorize its own end users.
 
 ## Customer/operator responsibilities
 
@@ -79,11 +80,9 @@ The operator controls local records and configured stores. Provide documented ex
 
 Do not encrypt backups with an Otya-only key. The operator controls recovery keys. Losing the operator's keys may make encrypted backups unrecoverable; explain this plainly.
 
-## Linux user isolation
+## Linux process boundary
 
-The initial Linux service target runs in the installing user's own service manager and uses that user's XDG directories. Its Unix socket is private to that user. It does not run as root or create a global service for unrelated OS users.
-
-System-wide service deployment with a dedicated account is a separate later mode and must not silently convert the single-operator product into a shared multi-user service.
+The default Linux service target runs in the installing user's own service manager and uses that user's XDG directories. A later server deployment may use one dedicated unprivileged service account selected by the operator. Neither mode is a shared tenant-hosting service.
 
 ## Responsibility matrix
 
