@@ -620,7 +620,7 @@ mod tests {
     };
 
     use super::*;
-    use otya_engine_core::{Storage, StorageError, StorageTransaction};
+    use otya_engine_core::{Storage, StorageError};
 
     fn root_user() -> bool {
         rustix::process::geteuid().is_root()
@@ -950,7 +950,7 @@ mod tests {
         let data_dir = temporary_root("core-storage");
         create_data_dir(&data_dir);
         let database = data_dir.join("engine.db");
-        let mut store = SqliteStore::open(&database).expect("database should initialize");
+        let store = SqliteStore::open(&database).expect("database should initialize");
         Storage::health_check(&store).expect("core storage health check should pass");
 
         {
