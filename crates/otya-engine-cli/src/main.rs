@@ -7,10 +7,19 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{DiagnosticSeverity, discover_engine_paths_for, parse_config};
+use otya_engine_core::{DiagnosticSeverity, StorageConfig, discover_engine_paths_for, parse_config};
 
 #[cfg(target_os = "linux")]
 use otya_engine_core::{DEFAULT_CONFIG_FILE_NAME, starter_config_toml};
+
+#[cfg(target_os = "linux")]
+use otya_engine_core::Storage;
+
+#[cfg(target_os = "linux")]
+use otya_engine_storage_sqlite::{SqliteOptions, SqliteStore};
+
+#[cfg(target_os = "linux")]
+use std::time::Duration;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -50,6 +59,29 @@ enum Command {
     Config {
         #[command(subcommand)]
         command: ConfigCommand,
+    },
+    /// Initialize or check an operator-owned local storage backend.
+    Storage {
+        #[command(subcommand)]
+        command: StorageCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum StorageCommand {
+    /// Explicitly initialize the configured SQLite database and schema.
+    Init {
+        #[arg(long, value_name = "FILE")]
+        config: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Check an existing database without creating a missing file or running migrations.
+    Check {
+        #[arg(long, value_name = "FILE")]
+        config: PathBuf,
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -122,6 +154,10 @@ fn run(cli: Cli) -> Result<(), String> {
         Command::Config { command } => match command {
             ConfigCommand::Init { instance, json } => init_config(instance.as_deref(), json)?,
             ConfigCommand::Validate { file, json } => validate_config(&file, json)?,
+        },
+        Command::Storage { command } => match command {
+            StorageCommand::Init { config, json } => storage_action(&config, true, json)?,
+            StorageCommand::Check { config, json } => storage_action(&config, false, json)?,
         },
     }
     Ok(())
@@ -327,6 +363,91 @@ fn init_config(instance: Option<&str>, json: bool) -> Result<(), String> {
             "secure configuration initialization is currently implemented only for Linux"
                 .to_owned(),
         )
+    }
+}
+
+
+fn storage_action(file: &Path, initialize: bool, json: bool) -> Result<(), String> {
+    let source = fs::read_to_string(file)
+        .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
+    let config = parse_config(&source)
+        .map_err(|error| format!("{}: {error}", file.display()))?;
+    if !config.validate().is_valid() {
+        return Err(format!("{}: configuration validation failed", file.display()));
+    }
+
+    match &config.storage {
+        StorageConfig::Memory => {
+            if initialize {
+                return Err(
+                    "configuration selects memory storage; it is volatile and has no database file to initialize. Select SQLite for persistent local storage.".to_owned()
+                );
+            }
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "backend": "memory",
+                        "persistent": false,
+                        "status": "ephemeral"
+                    })
+                );
+            } else {
+                println!("Storage backend: memory");
+                println!("status: ephemeral (no persistent database file exists)");
+            }
+            Ok(())
+        }
+        StorageConfig::Sqlite { path, busy_timeout_ms } => {
+            #[cfg(target_os = "linux")]
+            {
+                let options = SqliteOptions {
+                    busy_timeout: Duration::from_millis(*busy_timeout_ms),
+                };
+                let store = if initialize {
+                    SqliteStore::open_with_options(path, options)
+                } else {
+                    SqliteStore::open_existing_with_options(path, options)
+                }
+                .map_err(|error| error.to_string())?;
+                Storage::health_check(&store).map_err(|error| error.to_string())?;
+                let schema_version = store.schema_version().map_err(|error| error.to_string())?;
+                let integrity = store.integrity_check().map_err(|error| error.to_string())?;
+                if !integrity.is_ok() {
+                    return Err(format!(
+                        "SQLite integrity check failed: {}",
+                        integrity.messages.join("; ")
+                    ));
+                }
+                let status = if initialize { "initialized" } else { "healthy" };
+
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "backend": "sqlite",
+                            "path": store.path().display().to_string(),
+                            "status": status,
+                            "schema_version": schema_version,
+                            "integrity": integrity.messages
+                        }))
+                        .map_err(|error| format!("could not encode storage report: {error}"))?
+                    );
+                } else {
+                    println!("SQLite storage {status}");
+                    println!("database: {}", store.path().display());
+                    println!("schema version: {schema_version}");
+                    println!("integrity: {}", integrity.messages.join(", "));
+                    println!("No network connection was made.");
+                }
+                Ok(())
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                let _ = (path, busy_timeout_ms, initialize, json);
+                Err("the secure SQLite adapter is currently supported on Linux only".to_owned())
+            }
+        }
     }
 }
 
