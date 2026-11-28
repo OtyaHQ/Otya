@@ -113,9 +113,7 @@ impl CallerContext {
         S: Into<String>,
     {
         let subject = subject.into();
-        if subject.trim().is_empty()
-            || subject.len() > 256
-            || subject.chars().any(char::is_control)
+        if subject.trim().is_empty() || subject.len() > 256 || subject.chars().any(char::is_control)
         {
             return Err(ApplicationError::InvalidCaller);
         }
@@ -200,12 +198,9 @@ pub struct ApplicationResponse {
 }
 
 impl ApplicationResponse {
-    pub fn json<T: serde::Serialize>(
-        status: u16,
-        value: &T,
-    ) -> Result<Self, ApplicationError> {
-        let body = serde_json::to_vec(value)
-            .map_err(|_| ApplicationError::ResponseSerialization)?;
+    pub fn json<T: serde::Serialize>(status: u16, value: &T) -> Result<Self, ApplicationError> {
+        let body =
+            serde_json::to_vec(value).map_err(|_| ApplicationError::ResponseSerialization)?;
         Ok(Self {
             status,
             content_type: "application/json; charset=utf-8".to_owned(),
@@ -265,10 +260,7 @@ pub enum ApplicationError {
 pub trait Application: Send + Sync {
     fn manifest(&self) -> &'static ApplicationManifest;
 
-    fn handle(
-        &self,
-        request: ApplicationRequest,
-    ) -> Result<ApplicationResponse, ApplicationError>;
+    fn handle(&self, request: ApplicationRequest) -> Result<ApplicationResponse, ApplicationError>;
 }
 
 struct RegisteredApplication {
@@ -315,8 +307,7 @@ impl ApplicationRegistry {
             for registered in &self.applications {
                 for existing_route in registered.manifest.routes {
                     if existing_route.method == new_route.method
-                        && full_path(registered.manifest.base_path, existing_route.path)
-                            == new_path
+                        && full_path(registered.manifest.base_path, existing_route.path) == new_path
                     {
                         return Err(ApplicationError::RouteConflict);
                     }
@@ -333,7 +324,11 @@ impl ApplicationRegistry {
 
     pub fn dispatch(&self, request: ApplicationRequest) -> ApplicationResponse {
         if request.body.len() > MAX_APPLICATION_REQUEST_BYTES {
-            return error_response(413, "request_too_large", "Request body exceeds the 1 MiB limit.");
+            return error_response(
+                413,
+                "request_too_large",
+                "Request body exceeds the 1 MiB limit.",
+            );
         }
         if !valid_request_path(&request.path) {
             return error_response(400, "invalid_path", "The request path is invalid.");
@@ -352,10 +347,13 @@ impl ApplicationRegistry {
                     continue;
                 }
 
-                if route.access == AccessPolicy::Authenticated
-                    && !request.caller.is_authenticated()
+                if route.access == AccessPolicy::Authenticated && !request.caller.is_authenticated()
                 {
-                    return error_response(401, "authentication_required", "Authentication is required.");
+                    return error_response(
+                        401,
+                        "authentication_required",
+                        "Authentication is required.",
+                    );
                 }
 
                 if !route
@@ -363,22 +361,36 @@ impl ApplicationRegistry {
                     .iter()
                     .all(|required| request.caller.has_capability(required))
                 {
-                    return error_response(403, "permission_denied", "The caller lacks a required permission.");
+                    return error_response(
+                        403,
+                        "permission_denied",
+                        "The caller lacks a required permission.",
+                    );
                 }
 
                 return match registered.application.handle(request) {
                     Ok(response) if response.valid() => response,
-                    Ok(_) | Err(_) => {
-                        error_response(500, "application_error", "The application could not complete the request.")
-                    }
+                    Ok(_) | Err(_) => error_response(
+                        500,
+                        "application_error",
+                        "The application could not complete the request.",
+                    ),
                 };
             }
         }
 
         if path_exists {
-            error_response(405, "method_not_allowed", "The HTTP method is not supported for this route.")
+            error_response(
+                405,
+                "method_not_allowed",
+                "The HTTP method is not supported for this route.",
+            )
         } else {
-            error_response(404, "not_found", "No application route matches this request.")
+            error_response(
+                404,
+                "not_found",
+                "No application route matches this request.",
+            )
         }
     }
 
@@ -427,14 +439,19 @@ fn validate_manifest(manifest: &ApplicationManifest) -> Result<(), ApplicationEr
                 "route paths must be canonical absolute paths".to_owned(),
             ));
         }
-        if route.required_capabilities.iter().any(|capability| !valid_capability(capability)) {
+        if route
+            .required_capabilities
+            .iter()
+            .any(|capability| !valid_capability(capability))
+        {
             return Err(ApplicationError::InvalidManifest(
                 "route contains an invalid capability identifier".to_owned(),
             ));
         }
-        if manifest.routes[..index].iter().any(|previous| {
-            previous.method == route.method && previous.path == route.path
-        }) {
+        if manifest.routes[..index]
+            .iter()
+            .any(|previous| previous.method == route.method && previous.path == route.path)
+        {
             return Err(ApplicationError::InvalidManifest(
                 "the manifest contains a duplicate method/path route".to_owned(),
             ));
@@ -449,7 +466,10 @@ fn valid_application_id(value: &str) -> bool {
         && value.split('.').all(|part| {
             !part.is_empty()
                 && part.as_bytes()[0].is_ascii_lowercase()
-                && part.as_bytes().last().is_some_and(u8::is_ascii_alphanumeric)
+                && part
+                    .as_bytes()
+                    .last()
+                    .is_some_and(u8::is_ascii_alphanumeric)
                 && part
                     .bytes()
                     .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
@@ -462,7 +482,10 @@ fn valid_capability(value: &str) -> bool {
         && value.split('.').all(|part| {
             !part.is_empty()
                 && part.as_bytes()[0].is_ascii_lowercase()
-                && part.as_bytes().last().is_some_and(u8::is_ascii_alphanumeric)
+                && part
+                    .as_bytes()
+                    .last()
+                    .is_some_and(u8::is_ascii_alphanumeric)
                 && part
                     .bytes()
                     .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
@@ -516,9 +539,8 @@ fn error_response(status: u16, code: &str, message: &str) -> ApplicationResponse
             "message": message
         }
     });
-    ApplicationResponse::json(status, &body).unwrap_or_else(|_| {
-        ApplicationResponse::text(500, "Internal Server Error")
-    })
+    ApplicationResponse::json(status, &body)
+        .unwrap_or_else(|_| ApplicationResponse::text(500, "Internal Server Error"))
 }
 
 #[cfg(test)]
@@ -554,16 +576,21 @@ mod tests {
             &self,
             request: ApplicationRequest,
         ) -> Result<ApplicationResponse, ApplicationError> {
-            ApplicationResponse::json(200, &serde_json::json!({
-                "method": format!("{:?}", request.method()),
-                "path": request.path()
-            }))
+            ApplicationResponse::json(
+                200,
+                &serde_json::json!({
+                    "method": format!("{:?}", request.method()),
+                    "path": request.path()
+                }),
+            )
         }
     }
 
     fn registry() -> ApplicationRegistry {
         let mut registry = ApplicationRegistry::new();
-        registry.register(TestApplication).expect("test app should register");
+        registry
+            .register(TestApplication)
+            .expect("test app should register");
         registry
     }
 
@@ -606,11 +633,9 @@ mod tests {
 
     #[test]
     fn accepts_a_verified_caller_with_the_required_capability() {
-        let caller = CallerContext::from_verified_host(
-            "operator-1",
-            vec!["catalog.index.write".to_owned()],
-        )
-        .expect("valid caller");
+        let caller =
+            CallerContext::from_verified_host("operator-1", vec!["catalog.index.write".to_owned()])
+                .expect("valid caller");
         let response = registry().dispatch(request(
             HttpMethod::Post,
             "/api/v1/catalog/admin/rebuild",
@@ -679,6 +704,8 @@ mod tests {
 
     #[test]
     fn caller_context_rejects_control_characters() {
-        assert!(CallerContext::from_verified_host("operator\nforged", Vec::<String>::new()).is_err());
+        assert!(
+            CallerContext::from_verified_host("operator\nforged", Vec::<String>::new()).is_err()
+        );
     }
 }
