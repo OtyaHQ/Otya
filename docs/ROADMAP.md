@@ -110,7 +110,22 @@ Deliverables:
 
 Exit gate: each adapter passes conformance tests and can be disabled or replaced without changing engine core.
 
-## E7 — First business modules
+## E7 — Application SDK and first applications
+
+**Goal:** let independent developers build websites, APIs and other applications on top of Otya without turning the engine into a monolith.
+
+Deliverables:
+- Versioned application manifest, stable app ID and engine API compatibility declaration.
+- Application registry, exact route contracts, request/response limits and duplicate route detection.
+- Public/authenticated access policy and host-verified capability context.
+- Headless HTTP host adapters and frontend-to-API integration pattern.
+- Example catalog API and responsive website proving the application boundary.
+- App contract tests, starter template and eventually a project scaffolder.
+- Async handlers, middleware, path parameters, request schema validation and API specification generation after the initial contract is reviewed.
+
+Exit gate: the same app contract is tested through at least two distinct host adapters; authentication is verified by the host, capabilities are not caller-spoofable, and storage/operations are durable where the app requires them.
+
+## E8 — First business modules
 
 **Goal:** prove that reusable infrastructure supports real domain workflows.
 
@@ -125,7 +140,7 @@ Prioritized modules:
 
 Exit gate: each module has typed domain models, migrations, host-authorized operations, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
 
-## E8 — SDKs and host-application integrations
+## E9 — SDKs and host-application integrations
 
 **Goal:** let other applications embed or call the headless engine without turning Otya itself into a mobile or desktop app.
 
@@ -142,7 +157,7 @@ No standalone Otya Android/iOS app, APK or app-store product is planned in this 
 
 **Exit gate:** host SDK lifecycle, compatibility, ownership and authorization tests pass; HTTP API authentication and versioning are stable; optional bindings do not introduce mandatory mobile UI or platform dependencies.
  
-## E9 — Extension system and mature distribution
+## E10 — Extension system and mature distribution
 
 **Goal:** support independent modules without weakening the core.
 
