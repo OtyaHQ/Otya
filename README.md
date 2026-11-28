@@ -19,6 +19,10 @@ The engine is built in Rust and is headless-first. It can be embedded in a host 
 
 The engine does not silently create a central Otya service or send customer data to Otya. Remote integrations are opt-in and configured with accounts and credentials controlled by the operator.
 
+## Applications and websites built on Otya
+
+Otya is the foundation developers build on, not one monolithic application. The experimental `otya-engine-sdk` introduces application manifests, API routes, host-supplied authentication context and capability checks. The example catalog application and its responsive website demonstrate how a separate frontend calls an Otya-powered API. The example is stateless demonstration data, not a production commerce system. See [Applications on Otya](docs/APPLICATIONS_ON_OTYA.md), [example catalog app](examples/catalog-app/README.md) and [Cloudflare Worker host adapter](platforms/cloudflare-worker/README.md).
+
 ## The Media Kit design lesson
 
 Omy Play uses the third-party media_kit package as an embedded playback engine. Its modular packaging separates the shared player API from optional video rendering and native media libraries. Otya should learn from this packaging pattern:
@@ -101,6 +105,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [Phone-first development](docs/PHONE_FIRST_DEVELOPMENT.md)
 - [Mobile runtime model](docs/MOBILE_RUNTIME_MODEL.md)
 - [Headless and portable runtime](docs/HEADLESS_AND_PORTABLE_RUNTIME.md)
+- [Applications and websites on Otya](docs/APPLICATIONS_ON_OTYA.md)
+- [Example catalog application](examples/catalog-app/README.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
