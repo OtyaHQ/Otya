@@ -323,7 +323,10 @@ fn init_config(instance: Option<&str>, json: bool) -> Result<(), String> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = paths;
-        Err("secure configuration initialization is currently implemented only for Linux".to_owned())
+        Err(
+            "secure configuration initialization is currently implemented only for Linux"
+                .to_owned(),
+        )
     }
 }
 
