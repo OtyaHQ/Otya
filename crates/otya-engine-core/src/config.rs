@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -66,7 +66,7 @@ impl EngineConfig {
                 path,
                 busy_timeout_ms,
             } => {
-                if path.as_os_str().is_empty() || path == &PathBuf::from(":memory:") {
+                if path.as_os_str().is_empty() || path.as_path() == Path::new(":memory:") {
                     if self.instance.mode == InstanceMode::Service {
                         report.error(
                             "storage.sqlite_not_durable",
