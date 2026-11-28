@@ -59,6 +59,15 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 - [ ] Data export, import, retention and deletion.
 - [ ] Filesystem and optional object-storage adapters.
 
+## Headless runtime and remote operation
+
+- [x] Engine product is headless-first; the phone is a browser/client control surface, not an engine installation target.
+- [x] Separate Cloudflare Rust/WASM Worker host adapter and manual phone-triggered deployment workflow are committed; build/deployment verification is pending.
+- [ ] Generic authenticated HTTP management/API server and stable error/versioning contract.
+- [ ] Async host contracts for D1/remote storage, queues and durable operations; the current SQLite storage API is synchronous and native-first.
+- [ ] Cloudflare Worker, Container and generic OCI runtime integration, lifecycle and recovery acceptance.
+- [ ] Provider-neutral deployment profiles so GitHub/Cloudflare remain optional, operator-owned tooling.
+
 ## Runtime and reliability
 
 - [ ] Durable job leases, bounded retries and backoff with jitter.
@@ -101,9 +110,12 @@ The Linux SQLite adapter implements the core storage contract, namespaced key/va
 ## Developer experience and portability
 
 - [x] Codespaces devcontainer for phone-accessible remote Rust development, plus phone-first workflow documentation (first launch still needs manual confirmation).
-- [x] Android and WebAssembly portable-core compile workflow passed on the current branch revision; no APK or app runtime is implied.
-- [ ] Android NDK build, C ABI/JNI and Flutter/Dart FFI packages with API lifecycle tests.
-- [ ] Android private-storage, Keystore, background-work and offline behavior tests.
+- [x] Android and WebAssembly portable-core compile workflow passed; this is compile-compatibility evidence only and does not imply an APK or mobile app.
+- [x] Headless-first product boundary: Otya itself does not ship an Android/iOS app, APK or desktop GUI.
+- [ ] Stable versioned HTTPS API, authentication and host-application client contract.
+- [ ] Optional C ABI/JNI/Flutter/Dart host-application SDKs only if embedding is required; no standalone Otya APK pipeline.
+- [ ] Cloudflare Worker runtime tests, first deployed preview, async storage/operation contract and adapter conformance.
+- [ ] Cloudflare Container and generic OCI runtime profiles with durable external storage and recovery tests.
 - [ ] iOS FFI, Keychain, background-task and App Store release pipeline.
 - [ ] Rust SDK documentation and examples.
 - [ ] Versioned C ABI with ownership, threading and error contracts.
