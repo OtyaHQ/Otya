@@ -1,115 +1,97 @@
-# Otya
+# Otya Engine
 
-**Otya is an integrated systems platform, language and operating environment.**
+**Otya is an independently installable, customer-operated systems engine and reusable integration kit.**
 
-> Status: experimental foundation. This repository currently establishes architecture and language direction. It is not a released operating system, production engine, or security-certified runtime.
+Otya is designed to be installed into the environment of the person or organization using it. It is not an Otya-hosted backend, cloud service, mandatory database, identity provider or programming language. The customer owns the machine, operating system, data, provider accounts, credentials, backups, network, configuration and day-to-day operation.
 
-## One platform, several layers
+The engine is bootstrapped and maintained in Rust. Applications can embed its libraries or use its optional local service and operator CLI. It must remain useful without an Otya cloud account or a connection to Otya infrastructure.
 
-Otya is developed as one coordinated platform with clearly separated components:
+## What the engine provides
 
-- **Otya Engine** — the installable systems foundation: runtime hosting, services, package lifecycle, permissions, system APIs and device integration.
-- **Otya Language (.ot)** — the native developer-facing language for applications, services, automation and eventually parts of the platform itself.
-- **Otya Runtime** — loads and executes compiled Otya modules under explicit resource limits and capability permissions.
-- **Otya Toolchain** — compiler, formatter, test runner, package manager, diagnostics and developer CLI.
-- **Otya OS** — a complete operating environment that combines the engine, system services, user experience and a supported kernel.
+- A reusable Rust core with stable, versioned interfaces.
+- An embeddable library for applications, with native bindings where needed.
+- An optional local service for shared background work and local IPC.
+- A CLI and installation kit for setup, configuration, health checks, upgrades, backup and recovery.
+- Pluggable storage, identity, messaging, filesystem, network and provider adapters.
+- Reusable business and operational modules with explicit permissions.
+- Durable operations: idempotency, queues/outbox, retries, reconciliation and audit history.
+- Local diagnostics and observability with privacy-preserving defaults.
 
-These are components of one platform, not separate products that need unrelated repositories.
+The engine does not silently create a central Otya service or send customer data to Otya. Remote integrations are opt-in and configured with accounts and credentials controlled by the customer.
 
-## The Linux relationship
+## The Media Kit design lesson
 
-The initial Otya OS target will use the Linux kernel as its hardware and kernel foundation. Otya will build its own platform layer above it.
+Omy Play uses the third-party `media_kit` package as an embedded playback engine. Its modular packaging separates the shared player API from optional video rendering and native media libraries. Otya should learn from this packaging pattern:
 
-That gives the project access to an established kernel and driver ecosystem while it develops its own language, engine, system interfaces, packages, desktop/user experience and installation experience.
+- one stable public API over a shared core;
+- optional components installed only when needed;
+- small platform-specific bridges around a shared implementation;
+- no requirement for a separate vendor-hosted service to perform local work.
 
-Otya Engine should also be installable on a supported existing Linux distribution. A later Otya OS image can bundle the engine and the rest of the Otya environment into a bootable installer.
+Otya is not a media player and does not copy Media Kit's code. We are adopting the architectural lesson of a reusable, installable kit. See [Media Kit design lessons](docs/MEDIA_KIT_DESIGN_LESSONS.md).
 
-A custom kernel is a possible future research direction, not a prerequisite for the first useful release. Replacing Linux should require a clear technical reason, a maintained driver strategy and measurable benefits.
+## Operating modes
 
-## Initial technical direction
+1. **Embedded mode (primary):** a host application links the Otya Rust library through Rust APIs or supported FFI bindings. No daemon or public network listener is required.
+2. **Local service mode (optional):** a customer runs an Otya service for scheduled jobs, webhook intake, integration delivery and multiple local applications. Local IPC is the default; network exposure is an explicit operator decision.
+3. **Customer-hosted mode (optional):** the customer chooses to run the engine on their own server or infrastructure. Otya does not host it or operate the customer's environment.
 
-- Bootstrap implementation: Rust.
-- Otya source files: .ot.
-- Initial portable application target: WebAssembly, with interfaces shaped for the WebAssembly Component Model and WASI.
-- Initial embeddable runtime candidate: Wasmtime.
-- Initial OS foundation: Linux.
-- Package manifest: otya.toml.
-- Planned distributable package extension: .otpkg (not yet a stable format).
+All modes share the same engine core and versioned contracts.
 
-Wasmtime is designed to run WebAssembly, WASI and the Component Model outside browsers. Its documentation describes portable system interfaces and component composition. See the [Wasmtime documentation](https://docs.wasmtime.dev/) and [Component Model documentation](https://component-model.bytecodealliance.org/).
+## Data and infrastructure ownership
 
-Rust is the bootstrap implementation language, not the language developers must use to build Otya applications. See [The Rust Programming Language](https://doc.rust-lang.org/book/).
+Otya does not provide mandatory hosted compute, cloud storage or a central database.
 
-These are starting decisions for the prototype. They must be validated with working code, benchmarks, compatibility tests and security review before being treated as permanent standards.
+- The host application may provide storage through a versioned storage interface.
+- An optional embedded SQLite adapter can store local durable state on the customer's device or server.
+- A customer-managed PostgreSQL adapter may be used when the customer's deployment requires concurrent access across processes or hosts.
+- Files can remain on the local filesystem or use a customer-selected object-storage adapter.
+- Credentials are resolved through the customer's operating-system secret store, environment/credential injection or an explicitly configured vault.
 
-## Example direction
+A memory-only mode may be used for ephemeral tasks, but it must not be presented as durable storage. A production module that needs persistence must fail clearly when no appropriate storage adapter is configured.
 
-The following is proposed Otya 0.1 syntax. It is a language design example, not a claim that the compiler already runs it.
+## Provider integrations
 
-~~~ot
-module hello;
+Cloudflare, GitHub, Resend and Firebase are optional adapters, not engine dependencies:
 
-use std::io;
+| Provider | Optional responsibility |
+|---|---|
+| Cloudflare | Customer-authorized edge deployment and services such as Workers, R2 or D1 |
+| GitHub | Source control, release coordination and approved Actions workflows |
+| Resend | Transactional email delivery and verified delivery events |
+| Firebase | Mobile push and selected client-integrity or identity integrations |
 
-fn main() {
-    io::println("Hello from Otya!");
-}
-~~~
+Generic HTTP, signed webhooks, SMTP and S3-compatible storage are additional adapter categories. Each adapter must declare its permissions, required configuration, data sent, health checks, retry rules, provider limitations and failure behavior. No adapter may claim a provider operation succeeded without provider evidence.
 
-The .ot extension identifies Otya source code. Configuration and package metadata remain structured data files such as otya.toml; not every file needs to use .ot.
+## What Otya is not
 
-## Target repository layout
-
-~~~text
-otya/
-  compiler/       # lexer, parser, type checker and code generation
-  runtime/        # Wasm execution and capability host
-  engine/         # services, system APIs and lifecycle management
-  std/            # Otya standard library
-  tools/          # CLI, formatter, test runner and package manager
-  sdk/            # public interfaces and development tooling
-  os/             # Linux integration and Otya OS composition
-  installer/      # engine installer and future OS image tooling
-  docs/           # architecture, language and security specifications
-  examples/       # small .ot programs
-  tests/          # compiler, runtime and compatibility tests
-~~~
-
-This is the intended architecture, not yet the implemented directory tree.
-
-## Boundaries with the existing Otya ecosystem
-
-Otya Engine is a platform foundation. It does not replace or absorb the existing Otya products and their data ownership.
-
-- OEnd remains the existing shared backend and service integration layer.
-- OID remains the existing identity and account-security service.
-- Omy Play remains the local-first media product.
-- Opoint remains the private company operations product.
-- O remains the private owner intelligence application.
-- OHub remains the public developer and partner documentation surface.
-
-The engine may provide versioned local and remote integration interfaces, but it must not silently become a second identity provider, business database, or shared backend. Existing product boundaries and permissions remain authoritative.
-
-Third-party APIs and services are integrations, not guarantees. An adapter must declare its permissions, version, authentication requirements, health checks and failure behavior. The engine must not claim that an external API is correct, legal, available or compatible merely because an adapter exists.
+- Not a hosted SaaS backend.
+- Not a cloud provider or serverless platform.
+- Not a database service.
+- Not a replacement for Linux or the customer's operating system.
+- Not an identity provider by default.
+- Not a programming language, compiler or language runtime.
+- Not a guarantee that third-party APIs, providers or customer infrastructure are available or compliant.
 
 ## Development status
 
-The first milestones are architecture and language specification, a Rust bootstrap compiler, a constrained runtime, a small standard library and reproducible tests. The installable engine comes after those core contracts work.
+This repository is the source of truth for Otya Engine. The current repository is an experimental architecture foundation; architecture documents are not evidence that an installer, daemon, adapter or production service already exists.
 
-No release should be described as production-ready until its supported platforms, installation and recovery flows, upgrade behavior, security boundaries, compatibility policy and test evidence are published.
+Every feature must be labeled accurately as proposed, implemented, CI-tested, manually verified or released. See [Engine roadmap](docs/ROADMAP.md), [requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md), and [implementation gates](docs/ENGINE_RELIABILITY_MODEL.md).
 
-## Licensing and community status
+## Security, licensing and contributions
 
-This repository is currently public, but it does not yet contain an approved open-source license or contribution agreement. Public visibility alone does not grant permission to reuse, redistribute or modify the code.
+The engine must use deny-by-default permissions, least privilege, signed release artifacts, dependency review, bounded resource use and privacy-conscious diagnostics. See [Security policy](SECURITY.md).
 
-The license, trademark policy, contributor process and governance model must be approved and published before accepting external code contributions. Architecture proposals and issue discussions can help shape the project in the meantime.
+Repository visibility does not by itself grant permission to reuse, redistribute or modify the software. The license, trademark rules and contributor terms must be reviewed and approved before external code contributions are accepted. See [Contributing](CONTRIBUTING.md).
 
 ## Start here
 
-- [Platform architecture](docs/ARCHITECTURE.md)
-- [Otya Language 0.1 draft](docs/LANGUAGE_V0_1.md)
-- [Bootstrap and self-hosting](docs/BOOTSTRAP_AND_SELF_HOSTING.md)
+- [Engine architecture](docs/ARCHITECTURE.md)
+- [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
+- [Operator and ownership model](docs/OPERATOR_MODEL.md)
+- [Reliability, backup and recovery](docs/ENGINE_RELIABILITY_MODEL.md)
+- [Modules and provider adapters](docs/MODULES_AND_ADAPTERS.md)
+- [Media Kit design lessons](docs/MEDIA_KIT_DESIGN_LESSONS.md)
+- [Requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
-- [Platform foundation decision](docs/decisions/0001-platform-foundation.md)
-- [Contributing guidance](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
