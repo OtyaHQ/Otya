@@ -25,13 +25,13 @@
 
 ## CI evidence
 
-- Configuration initializer evidence: Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062).
-- Initial SQLite adapter baseline (before final private-file hardening and added reopen/preservation tests): Otya Engine CI [run 175](https://github.com/OtyaHQ/Otya/actions/runs/46141620082), commit `39489a3dbd77157d04058796c8f07237037ace76`.
-- Pull request: #2, tested implementation commit `cb3d33e29e6de51ea13ee92ef3587782d1eec2fd`.
-- Stable Rust quality job: **passed** — rustfmt, Clippy, workspace tests including initial SQLite initialization/WAL/transaction/identity tests, doctor and paths CLI smoke tests, secure config initialization with mode check, generated config validation, no-overwrite/content-preservation check, example configuration validation and release build.
-- Rust 1.85 minimum-version job: **passed** — workspace compile check and tests, including the SQLite foundation.
+- Configuration initializer was verified in Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062); it is also included in the latest full run.
+- Latest full branch verification: Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`.
+- Stable Rust quality job: **passed** — rustfmt, Clippy, all workspace tests (including SQLite initialisation, WAL, schema identity, reopen, permission hardening, foreign-database preservation and transaction rollback), CLI smoke tests, generated/example configuration validation and release build.
+- Rust 1.85 minimum-version job: **passed** — workspace compile and tests for the full workspace, including the optional SQLite crate.
+- The SQLite adapter uses the host system SQLite library. CI installs `libsqlite3-dev` and `pkg-config`; it does not enable the bundled SQLite feature.
 
-This verifies the Linux path resolver, private directory preparation and create-only configuration initializer on the GitHub-hosted Linux runner. It does not verify installation on a range of physical Linux distributions, arbitrary custom install roots, atomic config replacement, the future service daemon, data persistence, provider APIs or production readiness.
+This verifies the Linux path resolver, private configuration/database file handling and initial SQLite transaction foundation on a GitHub-hosted Linux runner. It does not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, the complete storage abstraction, full schema migration lifecycle, online backup/restore, crash recovery, the future service daemon, provider APIs or production readiness.
 
 ## Not yet implemented
 
