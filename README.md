@@ -4,7 +4,7 @@
 
 Otya is installed and operated independently by the person or organization choosing to run it. Each installation belongs to its operator and its own local security boundary. It is not a shared multi-tenant service: the engine has no company registration, tenant IDs, end-user directory, central customer registry or remote installation heartbeat. The host application owns its own users and business identities. The operator owns the machine, operating system, data, provider accounts, credentials, backups, network and configuration.
 
-The engine is built in Rust. Applications can embed its libraries or use its optional local service and operator CLI. It must remain useful without an Otya cloud account or a connection to Otya infrastructure.
+The engine is built in Rust and is headless-first. It can be embedded in a host process, run as an optional local/server service, run as a Cloudflare Rust/WebAssembly Worker, or later run in a Linux container. It must remain useful without an Otya cloud account or a connection to Otya infrastructure. Otya Engine itself is not an Android APK, iOS app, desktop GUI or app-store product.
 
 ## What the engine provides
 
@@ -36,7 +36,7 @@ Otya is not a media player and does not copy Media Kit's code. We are adopting t
 2. **Per-user service mode (optional):** the installing OS user runs one local Otya service for that user's trusted applications. Local IPC is owner-only by default. It is not a shared service for unrelated OS users; another operator installs a separate instance.
 3. **Operator-managed server mode (optional):** an operator may run the same engine on a server under a dedicated, unprivileged service account. That account operates one explicitly configured installation for that operator's deployment. It does not create a shared tenant pool or serve unrelated operators through engine-managed customer spaces.
 
-All modes share the same engine core and versioned contracts.
+All modes share the same portable core and versioned contracts. The Cloudflare Worker adapter is a separate Wasm host wrapper; the native Linux CLI/SQLite adapter is not assumed to run inside Workers. See [Headless and Portable Runtime Model](docs/HEADLESS_AND_PORTABLE_RUNTIME.md).
 
 ## Data and infrastructure ownership
 
@@ -78,9 +78,9 @@ This repository is the source of truth for Otya Engine. The current repository i
 
 Every feature must be labeled accurately as proposed, implemented, CI-tested, manually verified or released. See [Engine roadmap](docs/ROADMAP.md), [requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md), [comprehensive gap audit](docs/ENGINE_GAP_AUDIT.md), and [implementation gates](docs/ENGINE_RELIABILITY_MODEL.md).
 
-## Phone-first development and mobile use
+## Phone-first development and headless operation
 
-Otya development is designed so a contributor can use a phone browser with a remote Codespaces environment and GitHub Actions doing the heavy compilation and testing. A separate Android-first application architecture is planned so end users can use Otya-powered apps on phones without installing a PC toolchain. The current branch has a Codespaces devcontainer and Android/WebAssembly core compile workflow; these do not yet produce a mobile app or APK. See [Phone-First Development](docs/PHONE_FIRST_DEVELOPMENT.md) and [Mobile Runtime Model](docs/MOBILE_RUNTIME_MODEL.md).
+A contributor or operator can use a phone browser with GitHub, Codespaces and GitHub Actions doing the heavy editing, compilation, testing and deployment work remotely. Phone users access Otya-powered products through the host application's responsive website/mobile client or a headless HTTPS API. The engine itself is not distributed as an APK or mobile app. Android compile checks only preserve future host-application embedding options. See [Phone-First Development](docs/PHONE_FIRST_DEVELOPMENT.md), [Mobile Runtime Model](docs/MOBILE_RUNTIME_MODEL.md) and [Headless and Portable Runtime Model](docs/HEADLESS_AND_PORTABLE_RUNTIME.md).
 
 ## Engineering influences
 
@@ -100,6 +100,7 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [Optional SQLite storage adapter](docs/STORAGE_SQLITE.md)
 - [Phone-first development](docs/PHONE_FIRST_DEVELOPMENT.md)
 - [Mobile runtime model](docs/MOBILE_RUNTIME_MODEL.md)
+- [Headless and portable runtime](docs/HEADLESS_AND_PORTABLE_RUNTIME.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
