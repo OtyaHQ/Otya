@@ -5,6 +5,29 @@ use thiserror::Error;
 
 use crate::CONFIG_SCHEMA_VERSION;
 
+/// File name used by the explicit config initializer.
+pub const DEFAULT_CONFIG_FILE_NAME: &str = "otya-engine.toml";
+
+/// A safe, embedded-mode starter configuration.
+///
+/// Memory storage is intentionally selected because the durable SQLite and
+/// PostgreSQL adapters are not implemented yet. Validation reports this as a
+/// warning so an operator does not mistake the starter for durable storage.
+pub const fn starter_config_toml() -> &'static str {
+    r#"# Otya Engine starter configuration.
+# This profile is for embedded development and does not persist state.
+# Select a durable adapter only after installing and verifying that adapter.
+
+schema_version = 1
+
+[engine]
+mode = "embedded"
+
+[storage]
+backend = "memory"
+"#
+}
+
 /// Parse a configuration document without performing I/O or resolving secrets.
 pub fn parse_config(source: &str) -> Result<EngineConfig, ConfigError> {
     toml::from_str(source).map_err(ConfigError::from)
@@ -199,6 +222,16 @@ backend = "sqlite"
 path = "/home/test/.local/share/otya-engine/engine.db"
 busy_timeout_ms = 5000
 "#;
+
+    #[test]
+    fn starter_configuration_is_valid_and_warns_about_volatile_storage() {
+        let config = parse_config(starter_config_toml()).expect("starter config should parse");
+        let report = config.validate();
+        assert!(report.is_valid());
+        assert!(report.diagnostics.iter().any(|item| {
+            item.code == "storage.volatile" && item.severity == DiagnosticSeverity::Warning
+        }));
+    }
 
     #[test]
     fn parses_valid_single_operator_configuration() {
