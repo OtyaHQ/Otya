@@ -247,8 +247,7 @@ impl SqliteStore {
     /// Schema version read from SQLite's user_version header.
     pub fn schema_version(&self) -> Result<u32, SqliteStoreError> {
         let connection = self.lock_connection()?;
-        let version: i64 =
-            connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
+        let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
         u32::try_from(version).map_err(|_| SqliteStoreError::InvalidSchemaMetadata)
     }
 
@@ -327,11 +326,7 @@ pub struct SqliteStorageTransaction<'connection> {
 }
 
 impl StorageTransaction for SqliteStorageTransaction<'_> {
-    fn get(
-        &mut self,
-        namespace: &str,
-        key: &[u8],
-    ) -> Result<Option<Vec<u8>>, StorageError> {
+    fn get(&mut self, namespace: &str, key: &[u8]) -> Result<Option<Vec<u8>>, StorageError> {
         validate_namespace(namespace)?;
         validate_key(key)?;
 
@@ -345,12 +340,7 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
             .map_err(storage_backend_error)
     }
 
-    fn put(
-        &mut self,
-        namespace: &str,
-        key: &[u8],
-        value: &[u8],
-    ) -> Result<(), StorageError> {
+    fn put(&mut self, namespace: &str, key: &[u8], value: &[u8]) -> Result<(), StorageError> {
         validate_namespace(namespace)?;
         validate_key(key)?;
         validate_value(value)?;
@@ -394,16 +384,17 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
 
         let prefix_len = i64::try_from(prefix.len())
             .map_err(|_| StorageError::Backend("prefix length overflow".into()))?;
-        let row_limit = i64::try_from(limit)
-            .map_err(|_| StorageError::InvalidScanLimit)?;
-        let mut statement = self.connection.prepare(
-            "SELECT key, value
+        let row_limit = i64::try_from(limit).map_err(|_| StorageError::InvalidScanLimit)?;
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT key, value
              FROM otya_engine_kv
              WHERE namespace = ?1 AND substr(key, 1, ?2) = ?3
              ORDER BY key ASC
              LIMIT ?4",
-        )
-        .map_err(storage_backend_error)?;
+            )
+            .map_err(storage_backend_error)?;
         let rows = statement
             .query_map(params![namespace, prefix_len, prefix, row_limit], |row| {
                 Ok(StorageEntry {
@@ -469,7 +460,6 @@ fn validate_value(value: &[u8]) -> Result<(), StorageError> {
 fn storage_backend_error(error: rusqlite::Error) -> StorageError {
     StorageError::Backend(error.to_string())
 }
-
 
 fn initialize_or_verify_schema(
     connection: &mut Connection,
@@ -550,7 +540,8 @@ fn initialize_or_verify_schema(
     }
     verify_migration(&transaction, 1, INITIAL_MIGRATION_ID)?;
     verify_migration(&transaction, 2, KEY_VALUE_MIGRATION_ID)?;
-    let statement = transaction.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
+    let statement =
+        transaction.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
     drop(statement);
 
     transaction.commit()?;
@@ -576,7 +567,8 @@ fn verify_initialized_schema(connection: &Connection) -> Result<(), SqliteStoreE
     }
     verify_migration_on_connection(connection, 1, INITIAL_MIGRATION_ID)?;
     verify_migration_on_connection(connection, 2, KEY_VALUE_MIGRATION_ID)?;
-    let _statement = connection.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
+    let _statement =
+        connection.prepare("SELECT namespace, key, value FROM otya_engine_kv LIMIT 0")?;
     Ok(())
 }
 
@@ -667,7 +659,12 @@ mod tests {
         let store = SqliteStore::open(&database).expect("database should be initialized");
         assert_eq!(store.path(), database);
         assert_eq!(store.schema_version().expect("version should read"), 2);
-        assert!(store.integrity_check().expect("integrity check should run").is_ok());
+        assert!(
+            store
+                .integrity_check()
+                .expect("integrity check should run")
+                .is_ok()
+        );
         assert!(store.health_check().is_ok());
         assert_eq!(
             fs::metadata(&database)
@@ -689,11 +686,14 @@ mod tests {
         transaction
             .put("core", b"first", b"value")
             .expect("namespaced value should be written");
-        transaction.commit().expect("storage transaction should commit");
+        transaction
+            .commit()
+            .expect("storage transaction should commit");
 
         let mut read = store.begin().expect("read transaction should begin");
         assert_eq!(
-            read.get("core", b"first").expect("value should be readable"),
+            read.get("core", b"first")
+                .expect("value should be readable"),
             Some(b"value".to_vec())
         );
         read.commit().expect("read transaction should commit");
@@ -744,13 +744,19 @@ mod tests {
         }
         let data_dir = temporary_root("storage-contract");
         create_data_dir(&data_dir);
-        let store = SqliteStore::open(data_dir.join("engine.db"))
-            .expect("database should initialize");
+        let store =
+            SqliteStore::open(data_dir.join("engine.db")).expect("database should initialize");
 
         let mut transaction = store.begin().expect("transaction should begin");
-        transaction.put("media", b"track/02", b"two").expect("put should work");
-        transaction.put("media", b"track/01", b"one").expect("put should work");
-        transaction.put("media", b"album/01", b"album").expect("put should work");
+        transaction
+            .put("media", b"track/02", b"two")
+            .expect("put should work");
+        transaction
+            .put("media", b"track/01", b"one")
+            .expect("put should work");
+        transaction
+            .put("media", b"album/01", b"album")
+            .expect("put should work");
         transaction.commit().expect("transaction should commit");
 
         let mut scan = store.begin().expect("scan transaction should begin");
@@ -760,8 +766,15 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].key, b"track/01");
         assert_eq!(entries[1].key, b"track/02");
-        assert!(scan.delete("media", b"track/02").expect("delete should work"));
-        assert!(!scan.delete("media", b"missing").expect("delete should work"));
+        assert!(
+            scan.delete("media", b"track/02")
+                .expect("delete should work")
+        );
+        assert!(
+            !scan
+                .delete("media", b"missing")
+                .expect("delete should work")
+        );
         scan.commit().expect("scan transaction should commit");
 
         let mut invalid = store.begin().expect("transaction should begin");
@@ -801,14 +814,13 @@ mod tests {
 
         {
             let mut transaction = store.begin().expect("transaction should begin");
-            transaction.put("module", b"key", b"uncommitted").expect("put should work");
+            transaction
+                .put("module", b"key", b"uncommitted")
+                .expect("put should work");
         }
 
         let mut check = store.begin().expect("check transaction should begin");
-        assert_eq!(
-            check.get("module", b"key").expect("get should work"),
-            None
-        );
+        assert_eq!(check.get("module", b"key").expect("get should work"), None);
         check.commit().expect("check transaction should commit");
 
         drop(store);
@@ -822,8 +834,7 @@ mod tests {
         }
         let data_dir = temporary_root("transactions");
         create_data_dir(&data_dir);
-        let store = SqliteStore::open(data_dir.join("engine.db"))
-            .expect("database should open");
+        let store = SqliteStore::open(data_dir.join("engine.db")).expect("database should open");
 
         store
             .transaction(|transaction| {
@@ -943,8 +954,7 @@ mod tests {
         Storage::health_check(&store).expect("core storage health check should pass");
 
         {
-            let mut transaction =
-                Storage::begin(&store).expect("storage transaction should begin");
+            let mut transaction = Storage::begin(&store).expect("storage transaction should begin");
             transaction
                 .put("payments.records", b"record-2", b"two")
                 .unwrap();
@@ -972,9 +982,7 @@ mod tests {
         );
         assert!(transaction.delete("payments.records", b"record-1").unwrap());
         assert!(!transaction.delete("payments.records", b"missing").unwrap());
-        transaction
-            .commit()
-            .expect("transaction should commit");
+        transaction.commit().expect("transaction should commit");
 
         let mut verify = Storage::begin(&store).expect("verification transaction should begin");
         assert_eq!(verify.get("payments.records", b"record-1").unwrap(), None);
@@ -1004,7 +1012,9 @@ mod tests {
         }
         let mut verify = Storage::begin(&store).expect("verification transaction should begin");
         assert_eq!(verify.get("test.rollback", b"key").unwrap(), None);
-        verify.commit().expect("verification transaction should commit");
+        verify
+            .commit()
+            .expect("verification transaction should commit");
         drop(store);
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
     }
