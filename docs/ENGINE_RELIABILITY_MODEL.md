@@ -2,6 +2,8 @@
 
 Reliability is a set of verified behaviors under failure, not a claim that the engine never fails.
 
+The initial reliability boundary is one operator-owned installation under one OS user. It does not include tenant routing or a multi-user shared service. Separate OS users have separate installations and state roots.
+
 ## 1. Failure domains
 
 Design and test for:
