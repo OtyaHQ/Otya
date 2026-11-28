@@ -15,6 +15,8 @@ This is not a global Otya-hosted control plane and not a public multi-tenant Saa
 
 The previous "one installation, one operator" rule remains correct; it must not be misread as "one installation, one application" or "no local control plane". The Engine should have a local/operator-controlled control plane for that operator's own estate.
 
+The complete installable distribution should also include an operator console, installation-owned identity provider/login portal, authorization service, reusable UI kit and first-party shared service catalogue. These are local to the installation. See [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md) for the identity, UI, non-developer and installation-isolation design.
+
 ## The four levels
 
 1. **Installation / operator boundary** — one Engine installation controlled by an individual developer or organization. It owns the workspace registry, operator policies, provider connections, deployment credentials and management state.
@@ -76,7 +78,7 @@ Sharing is a first-class Engine feature. It should be declared, permissioned, ob
 
 | Capability | Recommended sharing model |
 |---|---|
-| Staff identity / SSO | One company identity authority can authenticate staff across selected internal apps. Each application retains its own roles, permissions and authorization rules. |
+| Staff identity / SSO | Prefer the installation-owned Otya identity issuer and login portal for company staff; optionally federate to an external OIDC/SAML provider. Each application retains its own roles, permissions and authorization rules. |
 | Public/customer identities | Separate by product by default. Omy listeners, customers or other public users must not automatically become OPoint or owner-app users. |
 | Email and push delivery | Shared operator-managed provider integration, with per-project sender identities, templates, scopes, quotas and credentials where supported. |
 | Provider connections | A centrally registered connection may be granted to selected projects. Prefer distinct least-privilege keys per project; never expose the raw provider secret to frontends. |
@@ -107,7 +109,7 @@ A shared company staff identity can provide SSO, but it must not collapse applic
 
 ## Control plane versus workload plane
 
-The Engine control plane is the operator's management layer. It stores desired state, inventories projects and components, checks policies, prepares deployment plans, records outcomes and coordinates providers through adapters.
+The Engine control plane is the operator's management layer and visual console for developers and non-developers. It stores desired state, inventories projects and components, manages the installation-owned identity portal, checks policies, prepares deployment plans, records outcomes and coordinates providers through adapters.
 
 The workload plane is where application code actually runs. It may be:
 - embedded in a Rust application;
@@ -200,6 +202,6 @@ The real manifest must support schema versioning, validation, dependency referen
 
 ## Current implementation status
 
-The current Rust workspace has an early local CLI, configuration and SQLite storage foundations, plus an experimental SDK and preview Cloudflare adapter. It does **not** yet provide the workspace registry, shared-service control plane, multi-project manifest loader, secret broker, deployment orchestrator, generic service daemon or production-grade remote host adapters described above.
+The current Rust workspace has an early local CLI, configuration and SQLite storage foundations, plus an experimental SDK and preview Cloudflare adapter. It does **not** yet provide the workspace registry, shared-service control plane, multi-project manifest loader, secret broker, deployment orchestrator, generic service daemon or production-grade remote host adapters described above. It also does **not** yet provide the full browser operator console, built-in identity provider/login portal, production authorization service, UI kit or non-developer visual workflows. These are target capabilities specified in [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md).
 
 This document defines the target; it does not claim those components already exist. No production Workers, repositories, databases, credentials, routes or deployments are changed by documenting this architecture.
