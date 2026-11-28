@@ -21,7 +21,7 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-At Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`, the branch contains:
+The last historically verified full foundation was Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`. It verified the Linux filesystem and initial SQLite adapter before the newer core storage contract, CLI storage commands and phone/mobile workflow were added. Those newer commits are implemented on the current draft branch, but require their own green CI results. Run 193 must not be treated as verification of those later changes. At run 193, the branch contained:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
@@ -49,7 +49,7 @@ The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux r
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
-| Storage | Initial Linux-only SQLite adapter foundation is implemented and full workspace CI passed on run 193. No generic storage trait exists yet. | Generic storage/transaction contract, module schemas, general migrations/locks/recovery, online backup/restore, crash/disk-full/stress tests, and optional customer-managed PostgreSQL adapter |
+| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions and initial v1-to-v2 schema migration are implemented; latest integration CI is pending | Adapter conformance across backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
@@ -59,6 +59,8 @@ The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux r
 | Module and extension system | Design documented | Registry, dependency/version resolution, signatures, safe disable/uninstall and isolated third-party process runtime |
 | Python SDK | Design documented | Versioned FFI contract, optional Python package, supported Python matrix and lifecycle/memory tests |
 | Flutter/Dart SDK | Design documented | C ABI, Dart FFI binding, native packaging and handle/lifetime/error tests |
+| Phone-first development | Codespaces devcontainer, phone-first guide and Android/WASM target workflow added; portability CI passed; Codespaces first launch still needs validation | Codespace first-launch validation, supported phone/browser checks, remote artifact workflow and no-PC Android app delivery |
+| Mobile runtime | Portable core Android/WASM compile checks pass; no mobile app released | Stable C ABI, Android platform adapter, APK build/signing, Kotlin/JNI and Dart FFI, lifecycle/offline tests and later iOS adapter |
 | Cross-platform support | Linux-first strategy documented | Verified Linux distro/libc matrix first; Windows and macOS implementations only after platform abstraction tests |
 | Observability | Design documented | Structured logs, rotation, health/readiness, metrics, traces, correlation and redacted support bundle |
 | Performance | Release profile configured; no benchmark baseline | Startup, idle memory, binary size, throughput, latency, concurrency and soak benchmarks with named reference hardware |
