@@ -269,7 +269,7 @@ fn validate_file_name(file_name: &str) -> Result<(), SecureFsError> {
         || file_name == "."
         || file_name == ".."
         || file_name.contains('/')
-        || file_name.contains('\\0')
+        || file_name.contains('\0')
     {
         return Err(SecureFsError::InvalidFileName(file_name.to_owned()));
     }
