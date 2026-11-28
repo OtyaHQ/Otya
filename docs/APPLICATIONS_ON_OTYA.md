@@ -6,13 +6,13 @@
 
 The engine is not one giant business application and does not require every developer to use an Otya interface. A developer creates an independent application, declares its application contract and capabilities, and uses Otya APIs and modules to avoid rebuilding common infrastructure.
 
-The application owns its business model, user interface, end-user accounts and product authorization. Otya supplies reusable runtime and infrastructure capabilities. Each operator controls the environment and provider accounts used by that application.
+The application owns its business model, product interface, resource permissions and business authorization. It may use the Engine installation's private identity provider for sign-in, or keep a separate product identity system. Otya supplies reusable runtime, operator UI, identity, UI-kit and infrastructure capabilities. Each operator controls the environment and provider accounts used by that application.
 
-Otya Engine itself is headless. It is not an APK, Android/iOS app, desktop GUI, website builder or app-store product.
+The portable Rust core is headless. The complete installation includes a browser-based operator console and may include reusable UI components, templates and schema-driven app-building tools. It is not an APK, Android/iOS app or app-store product. See [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md).
 
 ## Independent operator model
 
-Otya is installed separately by each developer or organization. Their application source remains in their own repository; the Engine is a dependency and runtime underneath it. An operator can run several applications inside one intentionally shared trust boundary or create separate named installations for stronger isolation. The Engine does not provide a shared multi-tenant customer pool. See [Building Independent Applications on Otya](INDEPENDENT_OPERATOR_GUIDE.md) for executable current setup steps, the actual shipped surface, non-Rust limitations and product/Worker retirement policy.
+Otya is installed separately by each developer or organization. Their application source remains in their own repository; the Engine is a dependency and runtime underneath it. An operator can run several applications inside one intentionally shared trust boundary or create separate named installations for stronger isolation. Each installation may have its own user directory, login portal and shared services; unrelated installations do not share them. The Engine does not provide a cross-customer multi-tenant pool. See [Building Independent Applications on Otya](INDEPENDENT_OPERATOR_GUIDE.md) for executable current setup steps, the actual shipped surface, non-Rust limitations and product/Worker retirement policy.
 
 ## What an Otya-powered product looks like
 
