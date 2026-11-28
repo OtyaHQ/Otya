@@ -6,18 +6,19 @@ The first Otya Engine runs as an ordinary Linux userspace library or process. It
 
 Linux already supplies process scheduling, virtual memory, file permissions, users/groups, signals, sockets, filesystems, namespaces, cgroups and syscall filtering. Otya builds a reliable application/engine layer using these existing interfaces. The installer must not modify the kernel or require root for ordinary embedded or per-user operation.
 
-## 2. One operator and one OS-user boundary
+## 2. One operator and one installation boundary
 
-The initial Linux installation belongs to the OS user who installs it.
+The installation belongs to one operator. The default Linux service profile runs under the installing OS user's UID through that user's systemd user manager.
 
 - Embedded mode: the host application links the Otya library and owns its process lifecycle.
-- Per-user service mode: the operator runs one optional Otya process under their own OS UID through their systemd user manager.
-- A second OS user does not share the first user's service, data, configuration or socket. That person installs a separate copy under their own account.
-- A single OS user can deliberately create multiple isolated installs with separate config/data roots and separate services, but they never become a tenant pool.
+- Per-user service mode: the operator runs one optional Otya process under their own OS UID.
+- Server service mode: an operator may explicitly select one dedicated, unprivileged service account for one isolated installation. The account owns that installation's files, database, logs and socket. This is not a shared service for unrelated operators.
+- A second OS user does not automatically share the first user's service, data, configuration or socket.
+- A single operator can deliberately create multiple isolated installs with separate config/data roots and separate services, but they never become a tenant pool.
 
-The engine does not create company, tenant or end-user identities. The OS user is the operator of the local installation. Applications above the engine own their own user/account models.
+The engine does not create company, tenant or end-user identities. The OS security principal is the local process boundary; the operator's name or organization is not sent to Otya. Applications above the engine own their own user/account models.
 
-A process running under the same OS UID generally has the same discretionary filesystem authority. The local engine socket is therefore an operator trust boundary, not a per-application sandbox. Do not run untrusted programs under the same OS account and assume the engine socket is private from them. Use a separate OS account or embedded mode with host-controlled APIs when stronger separation is needed.
+A process running under the same OS UID generally has the same discretionary filesystem authority. The local engine socket is therefore an operator trust boundary, not a per-application sandbox. Do not run untrusted programs under the same OS account and assume the engine socket is private from them. Use separate OS accounts or embedded mode with host-controlled APIs when stronger separation is needed.
 
 ## 3. Use the XDG Base Directory layout
 
@@ -25,11 +26,11 @@ Follow the XDG Base Directory Specification for per-user paths. Resolve the envi
 
 | Purpose | Location |
 |---|---|
-| Configuration | `$XDG_CONFIG_HOME/otya-engine/` (default `~/.config/otya-engine/`) |
-| Durable engine data and SQLite DB | `$XDG_DATA_HOME/otya-engine/` (default `~/.local/share/otya-engine/`) |
-| Logs and operational state | `$XDG_STATE_HOME/otya-engine/` (default `~/.local/state/otya-engine/`) |
-| Rebuildable cache | `$XDG_CACHE_HOME/otya-engine/` (default `~/.cache/otya-engine/`) |
-| Unix socket and transient locks | `$XDG_RUNTIME_DIR/otya-engine/` (typically `/run/user/<uid>/otya-engine/`) |
+| Configuration | XDG_CONFIG_HOME/otya-engine/ (default ~/.config/otya-engine/) |
+| Durable engine data and SQLite DB | XDG_DATA_HOME/otya-engine/ (default ~/.local/share/otya-engine/) |
+| Logs and operational state | XDG_STATE_HOME/otya-engine/ (default ~/.local/state/otya-engine/) |
+| Rebuildable cache | XDG_CACHE_HOME/otya-engine/ (default ~/.cache/otya-engine/) |
+| Unix socket and transient locks | XDG_RUNTIME_DIR/otya-engine/ (typically /run/user/UID/otya-engine/) |
 
 Use restrictive permissions:
 - configuration and secret reference files: owner read/write only unless deliberately shared;
@@ -40,28 +41,26 @@ Use restrictive permissions:
 
 The engine must create a runtime subdirectory with owner-only permissions and verify its owner before opening a socket. Runtime files are transient; the XDG runtime directory is not suitable for database files, backups or other durable state.
 
-The current configuration parser does not expand tilde or environment variables inside TOML strings. Until a dedicated path resolver is implemented and tested, operators must provide a real, absolute database path. Do not write a literal `~` or `${XDG_DATA_HOME}` and assume TOML expands it.
+The current configuration parser does not expand tilde or environment variables inside TOML strings. Until a dedicated path resolver is implemented and tested, operators must provide a real, absolute database path. Do not write a literal tilde or variable expression and assume TOML expands it.
 
-## 4. systemd user service
+## 4. systemd service management
 
-The optional daemon should be installed as a user unit, not a system-wide root service:
+The first optional daemon should be installed as a user unit, not a system-wide root service. It runs as the installing user by virtue of that user's systemd user manager; a normal user unit does not need User= or Group= switching.
 
-`~/.config/systemd/user/otya-engine.service`
+A later server deployment profile may use a system service with one dedicated unprivileged service account. That is a distinct, explicit operator decision. The installer must display the selected account and every directory it will own. It must never create a shared service for unrelated operators.
 
-It runs as the installing user by virtue of that user's systemd user manager; no `User=` or `Group=` switching is required or appropriate in a normal user unit.
+The template under packaging/linux/systemd-user/ is illustrative until the daemon executable and service integration are implemented. It must not be installed or enabled automatically by the current CLI.
 
-The template under `packaging/linux/systemd-user/` is illustrative until the daemon executable and service integration are implemented. It must not be installed or enabled automatically by the current CLI.
-
-Expected lifecycle:
-- `systemctl --user daemon-reload`
-- `systemctl --user enable --now otya-engine.service`
-- `systemctl --user status otya-engine.service`
-- `journalctl --user -u otya-engine.service`
-- `systemctl --user stop otya-engine.service`
+Expected user-service lifecycle:
+- systemctl --user daemon-reload
+- systemctl --user enable --now otya-engine.service
+- systemctl --user status otya-engine.service
+- journalctl --user -u otya-engine.service
+- systemctl --user stop otya-engine.service
 
 By default, user services are tied to the user's login/session manager. Running the service after the user logs out requires the operator to explicitly configure lingering on their own host. The installer must never enable lingering without explaining the effect and obtaining operator approval.
 
-systemd sandbox options vary by systemd version, kernel configuration and whether a service runs under the system or user manager. In particular, some filesystem-namespacing options available to system services are not generally available in user services. The unit must use only tested options for the supported matrix; do not claim isolation because a directive appears in a unit file. See the systemd execution documentation.
+systemd sandbox options vary by systemd version, kernel configuration and whether a service runs under the system or user manager. Some filesystem-namespacing options available to system services are not generally available in user services. The unit must use only tested options for the supported matrix; do not claim isolation because a directive appears in a unit file.
 
 ## 5. Linux security primitives
 
@@ -102,14 +101,14 @@ Distribution sequence:
 3. RPM package after the same acceptance suite.
 4. Additional desktop/service targets only after the Linux lifecycle is stable.
 
-Do not publish a generic install pipe such as `curl | sudo sh`. The operator must be able to inspect the release, verify its signature/checksum, review permissions and choose whether to install the user service.
+Do not publish a generic install pipe that executes a remote script with sudo. The operator must be able to inspect the release, verify its signature/checksum, review permissions and choose whether to install the user service.
 
 ## 8. References
 
 - XDG Base Directory Specification: https://specifications.freedesktop.org/basedir/
+- Linux kernel documentation: https://docs.kernel.org/
 - systemd execution and sandboxing: https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 - systemd user unit search paths: https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html
-- Ubuntu Linux security architecture overview: https://ubuntu.com/server/docs/reference/security-architecture/defense-in-depth-layers/
 - SQLite Online Backup API: https://sqlite.org/backup.html
 
 These references inform design; Otya still needs its own platform tests and security review.
