@@ -499,7 +499,7 @@ fn valid_route_path(path: &str) -> bool {
         || path.contains('?')
         || path.contains('#')
         || path.contains('%')
-        || path.chars().any(|character| !character.is_ascii())
+        || !path.is_ascii()
     {
         return false;
     }
