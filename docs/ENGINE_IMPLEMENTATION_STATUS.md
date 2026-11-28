@@ -22,8 +22,12 @@
 - The separate Linux SQLite adapter implements that contract using private operator-owned files, no-follow checks, Otya database identity metadata, schema v1-to-v2 migration, WAL, bounded busy timeout and rollback-safe transactions.
 - CLI `otya storage init --config FILE` explicitly initializes the SQLite database; `otya storage check --config FILE` checks an existing database without creating a missing one or running a migration.
 - A phone-accessible Codespaces devcontainer provides a remote Rust environment with SQLite build dependencies and Android/WebAssembly Rust targets.
-- A separate mobile portability workflow compiles the platform-neutral core for Android and WebAssembly; it does not yet build an APK, FFI bridge or mobile app.
-- Phone-first and mobile-runtime architecture guides distinguish remote development from actual mobile runtime support.
+- A separate portability workflow compiles the platform-neutral core for Android and WebAssembly; these are library compatibility checks only, not an APK or app build.
+- A minimal Cloudflare Rust Worker adapter and manual deployment workflow are committed; the new dedicated CI check and a first preview deployment are pending.
+- Phone-first and headless-runtime architecture guides distinguish remote development/control from the engine's runtime.
+- A separate Cloudflare Workers Rust/WebAssembly host adapter is committed with /health and /version handlers; its CI compile check and first deployment are pending.
+- A manual GitHub Actions deployment workflow can deploy a preview Worker or production Worker from main using operator-owned Cloudflare secrets. It does not auto-deploy and does not contain credentials.
+- The engine product is explicitly headless: no standalone Otya Android/iOS app, APK, desktop GUI or app-store product is planned.
 - Local commands do not make network calls.
 - Comprehensive engine gap audit and staged implementation plan documented.
 - Obsolete .ot language example removed from the active engine branch.
@@ -35,7 +39,7 @@
 - Subsequent commits update documentation; the tested Rust/storage implementation is unchanged from the code commit above.
 - The Codespaces devcontainer is committed, but first-launch usability on a real phone browser has not yet been manually validated.
 
-The CI results verify the tested Linux workspace and portable-core target compilation. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, an Android APK/FFI application, an iOS application, the future service daemon, provider APIs or production readiness.
+The CI results verify the tested Linux workspace and portable-core target compilation. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, the new Cloudflare Worker adapter (pending its dedicated CI run), D1/Queues/Workflows bindings, a first Cloudflare deployment, the future service daemon, provider APIs or production readiness.
 
 ## Not yet implemented
 
@@ -52,8 +56,9 @@ The CI results verify the tested Linux workspace and portable-core target compil
 - Durable job queue, scheduler, outbox, inbox and webhook verification.
 - Backup, restore, migrations and crash recovery.
 - Business modules and host-application authorization integration.
-- Stable C ABI, Android/Kotlin/JNI, Flutter/Dart and Python bindings; no mobile packages are released yet.
-- Android platform storage/secrets/background-work adapter, Android NDK APK pipeline and iOS platform adapter.
+- Stable C ABI, Python and optional Kotlin/JNI or Flutter/Dart host-application SDKs; no SDK packages are released yet.
+- Android/iOS platform-specific embedding adapters only if a host application needs them; no standalone Otya mobile app or APK pipeline is planned.
+- Generic authenticated HTTP management/API server and async remote-storage/operation contracts.
 - Codespaces devcontainer first-launch validation on a real phone browser.
 - Cross-platform installers, signed release artifacts, SBOM and build provenance.
 
