@@ -24,21 +24,24 @@ Exit gate: architecture reviewed; no mandatory Otya cloud dependency; no hidden 
 Deliverables:
 - Rust workspace with pinned stable toolchain and declared MSRV.
 - CI for formatting, Clippy, unit tests, integration tests and dependency checks.
-- XDG-aware Linux paths for config, data, state, cache and runtime sockets.
+- Linux XDG path resolution for per-operator config, data, state, cache and optional runtime paths.
+- Read-only CLI paths command with human-readable and JSON output.
 - Strict configuration with schema versions and no engine-level company, tenant or end-user identity fields.
-- CLI for version, doctor, config validation, status, logs and self-test.
+- CLI for version, doctor, paths and config validation; status, logs and self-test remain future work.
 - Linux x86_64 and aarch64 build targets.
 - OS-neutral core contracts and isolated platform-specific code.
 
 Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; no secrets emitted in logs; all reported support targets are actually tested.
 
-## E2 — Installation kit and lifecycle
+## E2 — Secure filesystem and installation lifecycle
 
 **Goal:** install, operate and remove the engine without a hosted Otya service.
 
 Deliverables:
+- Explicit installation roots and safe overrides, including multiple isolated installations under one OS user.
+- Secure directory creation, ownership/mode checks and symlink-safe filesystem operations.
 - Signed release artifacts and checksums.
-- Install script/package with host preflight checks.
+- Install package with host preflight checks.
 - Per-user service profile; later optional dedicated unprivileged server-service profile.
 - systemd unit with tested hardening and configurable resource limits.
 - Start, stop, restart, status, doctor, logs and uninstall.
@@ -144,8 +147,9 @@ Deliverables:
 - Evaluate WASI Component Model sandboxing as an optional extension ABI.
 - Standard package formats only after signing, rollback and dependency-conflict behavior are proven.
 - Release channels, support windows, migration guarantees and deprecation policy.
+- Committed Cargo.lock and CI builds in locked dependency mode.
 
-Exit gate: untrusted extensions cannot access undeclared host resources; incompatible upgrades fail closed; recovery and uninstall are tested.
+Exit gate: untrusted extensions cannot access undeclared host resources; incompatible upgrades fail closed; recovery and uninstall are tested; dependency versions are reproducible.
 
 ## Always-on release requirements
 
