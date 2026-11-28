@@ -353,7 +353,7 @@ pub fn prepare_private_file(
     let file_fd = openat(
         &directory_fd,
         file_name,
-        OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
+        OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
         Mode::empty(),
     )
     .map_err(|error| {
