@@ -8,7 +8,9 @@ This is an engine-only, evidence-based roadmap. Milestones are complete only whe
 
 Deliverables:
 - Engine-only product definition and Otya/OEnd boundary.
-- One installation, one operator; no central customer or tenant control plane.
+- One installation, one operator boundary, many workspaces/projects/components; a local operator-controlled control plane manages that operator's estate.
+- No global Otya-hosted control plane, cross-operator registry, shared customer pool or mandatory vendor heartbeat.
+- Explicit distinction between operator/workspace/project/component/environment scope and application end-user identity.
 - Embedded-library, optional local-service and CLI model.
 - Customer-operated responsibility and data ownership model.
 - Module, storage and provider adapter contracts.
@@ -16,6 +18,21 @@ Deliverables:
 - Threat model and dependency policy.
 
 Exit gate: architecture reviewed; no mandatory Otya cloud dependency; no hidden network calls; supported initial platform documented.
+
+## E0.5 — Multi-project operator model
+
+**Goal:** allow one installation to manage a coherent estate without merging applications or sharing data by accident.
+
+Deliverables:
+- Versioned workspace, project, component and environment model.
+- Local project inventory spanning multiple repositories and deployable units.
+- Project-scoped configuration, secrets references, access grants and release records.
+- Shared-service contract and default-deny grant model.
+- Read-only inventory and dry-run planning before deployment mutation.
+- Separation of operator control plane from independently running workload plane.
+- Failure isolation: one project's update, outage or rollback must not mutate another project.
+
+Exit gate: one disposable installation can inventory multiple independent sample projects and components, prove explicit service grants, and demonstrate that revoking a grant or rolling back one project does not affect another.
 
 ## E1 — Rust workspace, build and operator CLI
 
