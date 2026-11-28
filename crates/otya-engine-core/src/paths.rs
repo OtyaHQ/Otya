@@ -8,10 +8,11 @@ use thiserror::Error;
 
 /// Resolved directories for one locally operated Otya installation.
 ///
-/// This type only resolves path names. It does not create directories, change
-/// permissions, follow symlinks, or claim that a runtime directory is secure.
+/// An optional instance name is only a local filesystem namespace selected
+/// by the operator. It is not a customer ID, tenant ID or remote identity.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct EnginePaths {
+    pub instance: Option<String>,
     pub config_dir: PathBuf,
     pub data_dir: PathBuf,
     pub state_dir: PathBuf,
@@ -33,13 +34,31 @@ pub enum PathResolutionError {
     HomeUnavailable,
     #[error("path discovery is currently implemented only for Linux")]
     UnsupportedPlatform,
+    #[error("invalid local instance name {0:?}; use 1-48 lowercase letters, digits, underscores or hyphens, starting with a letter or digit")]
+    InvalidInstanceName(String),
 }
 
-/// Discover XDG paths for the current Linux operator.
+/// Discover the default installation paths for the current Linux operator.
 ///
 /// Relative XDG environment overrides are ignored, as required by the XDG
 /// Base Directory Specification. No filesystem changes are performed.
 pub fn discover_engine_paths() -> Result<EnginePaths, PathResolutionError> {
+    discover_engine_paths_for(None)
+}
+
+/// Discover paths for a named local installation owned by the current operator.
+///
+/// Without an instance name, the historical default otya-engine paths are used.
+/// A named instance gets an independent otya-engine/instances/<name> directory
+/// under each XDG base directory. The name never leaves this process and is not
+/// registered with Otya.
+pub fn discover_engine_paths_for(
+    instance: Option<&str>,
+) -> Result<EnginePaths, PathResolutionError> {
+    if let Some(name) = instance {
+        validate_instance_name(name)?;
+    }
+
     #[cfg(target_os = "linux")]
     {
         let home = env::var_os("HOME").map(PathBuf::from);
@@ -49,12 +68,29 @@ pub fn discover_engine_paths() -> Result<EnginePaths, PathResolutionError> {
         let cache = env::var_os("XDG_CACHE_HOME").map(PathBuf::from);
         let runtime = env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
 
-        resolve_from_values(home, config, data, state, cache, runtime)
+        resolve_from_values(home, config, data, state, cache, runtime, instance)
     }
 
     #[cfg(not(target_os = "linux"))]
     {
+        let _ = instance;
         Err(PathResolutionError::UnsupportedPlatform)
+    }
+}
+
+fn validate_instance_name(name: &str) -> Result<(), PathResolutionError> {
+    let bytes = name.as_bytes();
+    let valid_first = bytes
+        .first()
+        .is_some_and(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit());
+    let valid_rest = bytes.iter().all(|byte| {
+        byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'_' || *byte == b'-'
+    });
+
+    if (1..=48).contains(&bytes.len()) && valid_first && valid_rest {
+        Ok(())
+    } else {
+        Err(PathResolutionError::InvalidInstanceName(name.to_owned()))
     }
 }
 
@@ -66,6 +102,7 @@ fn resolve_from_values(
     state: Option<PathBuf>,
     cache: Option<PathBuf>,
     runtime: Option<PathBuf>,
+    instance: Option<&str>,
 ) -> Result<EnginePaths, PathResolutionError> {
     let home = home
         .filter(|path| path.is_absolute())
@@ -98,8 +135,13 @@ fn resolve_from_values(
         &mut diagnostics,
     );
 
+    let instance_suffix = match instance {
+        Some(name) => PathBuf::from("otya-engine").join("instances").join(name),
+        None => PathBuf::from("otya-engine"),
+    };
+
     let runtime_dir = match runtime.filter(|path| !path.as_os_str().is_empty()) {
-        Some(path) if path.is_absolute() => Some(path.join("otya-engine")),
+        Some(path) if path.is_absolute() => Some(path.join(&instance_suffix)),
         Some(_) => {
             diagnostics.push(PathDiagnostic {
                 code: "paths.invalid_xdg_runtime_home",
@@ -117,10 +159,11 @@ fn resolve_from_values(
     };
 
     Ok(EnginePaths {
-        config_dir: config_base.join("otya-engine"),
-        data_dir: data_base.join("otya-engine"),
-        state_dir: state_base.join("otya-engine"),
-        cache_dir: cache_base.join("otya-engine"),
+        instance: instance.map(str::to_owned),
+        config_dir: config_base.join(&instance_suffix),
+        data_dir: data_base.join(&instance_suffix),
+        state_dir: state_base.join(&instance_suffix),
+        cache_dir: cache_base.join(&instance_suffix),
         runtime_dir,
         diagnostics,
     })
@@ -161,9 +204,11 @@ mod tests {
             None,
             None,
             Some(PathBuf::from("/run/user/1000")),
+            None,
         )
         .expect("absolute HOME should resolve");
 
+        assert_eq!(paths.instance, None);
         assert_eq!(
             paths.config_dir,
             PathBuf::from("/home/operator/.config/otya-engine")
@@ -196,6 +241,7 @@ mod tests {
             Some(PathBuf::from("/mnt/state")),
             Some(PathBuf::from("/mnt/cache")),
             Some(PathBuf::from("/run/user/1000")),
+            None,
         )
         .expect("absolute paths should resolve");
 
@@ -203,6 +249,61 @@ mod tests {
         assert_eq!(paths.data_dir, PathBuf::from("/mnt/data/otya-engine"));
         assert_eq!(paths.state_dir, PathBuf::from("/mnt/state/otya-engine"));
         assert_eq!(paths.cache_dir, PathBuf::from("/mnt/cache/otya-engine"));
+    }
+
+    #[test]
+    fn named_instances_have_separate_local_directories() {
+        let first = resolve_from_values(
+            Some(PathBuf::from("/home/operator")),
+            None,
+            None,
+            None,
+            None,
+            Some(PathBuf::from("/run/user/1000")),
+            Some("payments"),
+        )
+        .expect("valid instance should resolve");
+        let second = resolve_from_values(
+            Some(PathBuf::from("/home/operator")),
+            None,
+            None,
+            None,
+            None,
+            Some(PathBuf::from("/run/user/1000")),
+            Some("media"),
+        )
+        .expect("valid instance should resolve");
+
+        assert_eq!(first.instance.as_deref(), Some("payments"));
+        assert_eq!(
+            first.config_dir,
+            PathBuf::from("/home/operator/.config/otya-engine/instances/payments")
+        );
+        assert_eq!(
+            first.data_dir,
+            PathBuf::from("/home/operator/.local/share/otya-engine/instances/payments")
+        );
+        assert_eq!(
+            first.runtime_dir,
+            Some(PathBuf::from(
+                "/run/user/1000/otya-engine/instances/payments"
+            ))
+        );
+        assert_ne!(first.config_dir, second.config_dir);
+        assert_ne!(first.data_dir, second.data_dir);
+        assert_ne!(first.runtime_dir, second.runtime_dir);
+    }
+
+    #[test]
+    fn rejects_instance_names_that_could_escape_or_collide() {
+        for invalid in ["", "../outside", "Uppercase", "two words", "a/b", "a.b", "-start"] {
+            assert!(matches!(
+                validate_instance_name(invalid),
+                Err(PathResolutionError::InvalidInstanceName(_))
+            ));
+        }
+        assert!(validate_instance_name("main-2").is_ok());
+        assert!(validate_instance_name("team_data").is_ok());
     }
 
     #[test]
@@ -214,6 +315,7 @@ mod tests {
             Some(PathBuf::from("relative-state")),
             Some(PathBuf::from("relative-cache")),
             Some(PathBuf::from("relative-runtime")),
+            None,
         )
         .expect("valid HOME should resolve");
 
@@ -259,6 +361,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .expect("embedded paths should resolve without runtime directory");
 
@@ -274,12 +377,13 @@ mod tests {
     #[test]
     fn rejects_missing_or_relative_home() {
         assert_eq!(
-            resolve_from_values(None, None, None, None, None, None),
+            resolve_from_values(None, None, None, None, None, None, None),
             Err(PathResolutionError::HomeUnavailable)
         );
         assert_eq!(
             resolve_from_values(
                 Some(PathBuf::from("relative-home")),
+                None,
                 None,
                 None,
                 None,
