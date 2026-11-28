@@ -356,7 +356,13 @@ pub fn prepare_private_file(
         OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
         Mode::empty(),
     )
-    .map_err(|error| io_error("open managed file without following symlinks", &file_path, error))?;
+    .map_err(|error| {
+        io_error(
+            "open managed file without following symlinks",
+            &file_path,
+            error,
+        )
+    })?;
 
     let metadata =
         fstat(&file_fd).map_err(|error| io_error("inspect managed file", &file_path, error))?;
@@ -516,8 +522,7 @@ mod tests {
 
         let root = temporary_root("prepare-file");
         let data_dir = root.join("data");
-        ensure_private_directory("data", &data_dir)
-            .expect("data directory should be prepared");
+        ensure_private_directory("data", &data_dir).expect("data directory should be prepared");
         let database = data_dir.join("engine.db");
         fs::write(&database, b"placeholder").expect("placeholder should be written");
         fs::set_permissions(&database, fs::Permissions::from_mode(0o644))
