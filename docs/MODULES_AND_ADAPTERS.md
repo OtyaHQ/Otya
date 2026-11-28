@@ -2,7 +2,9 @@
 
 ## Separate business logic from provider mechanics
 
-A business module owns domain meaning, authorization and invariants. An adapter translates a stable engine contract to an external system. The engine core owns lifecycle, permissions, common reliability, diagnostics and version negotiation.
+A business module owns domain meaning, authorization and invariants. An adapter translates a stable engine contract to an external system. The engine core owns lifecycle, local capabilities, common reliability, diagnostics and version negotiation.
+
+The core is single-operator and tenant-unaware. It does not create company/customer records, tenant IDs or end-user accounts. A host application owns those identities and passes only the minimum scoped operation context needed by a module.
 
 Do not put provider-specific SDK calls throughout business modules.
 
