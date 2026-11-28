@@ -164,7 +164,10 @@ mod tests {
         )
         .expect("absolute HOME should resolve");
 
-        assert_eq!(paths.config_dir, PathBuf::from("/home/operator/.config/otya-engine"));
+        assert_eq!(
+            paths.config_dir,
+            PathBuf::from("/home/operator/.config/otya-engine")
+        );
         assert_eq!(
             paths.data_dir,
             PathBuf::from("/home/operator/.local/share/otya-engine")
@@ -239,10 +242,12 @@ mod tests {
                 .count(),
             4
         );
-        assert!(paths
-            .diagnostics
-            .iter()
-            .any(|item| item.code == "paths.invalid_xdg_runtime_home"));
+        assert!(
+            paths
+                .diagnostics
+                .iter()
+                .any(|item| item.code == "paths.invalid_xdg_runtime_home")
+        );
     }
 
     #[test]
@@ -258,10 +263,12 @@ mod tests {
         .expect("embedded paths should resolve without runtime directory");
 
         assert!(paths.runtime_dir.is_none());
-        assert!(paths
-            .diagnostics
-            .iter()
-            .any(|item| item.code == "paths.runtime_dir_unavailable"));
+        assert!(
+            paths
+                .diagnostics
+                .iter()
+                .any(|item| item.code == "paths.runtime_dir_unavailable")
+        );
     }
 
     #[test]
