@@ -121,6 +121,8 @@ Deliverables:
 - Headless HTTP host adapters and frontend-to-API integration pattern.
 - Example catalog API and responsive website proving the application boundary.
 - App contract tests, starter template and eventually a project scaffolder.
+- A separately maintained sample application that builds using only released SDK artifacts, without depending on a private monorepo path.
+- A documented external-operator quickstart and an Engine/product capability matrix that distinguishes shipped from planned features.
 - Async handlers, middleware, path parameters, request schema validation and API specification generation after the initial contract is reviewed.
 
 Exit gate: the same app contract is tested through at least two distinct host adapters; authentication is verified by the host, capabilities are not caller-spoofable, and storage/operations are durable where the app requires them.
