@@ -39,8 +39,10 @@ jobs:
       - name: Test workspace
         run: cargo test --workspace --all-targets
 
-      - name: CLI local diagnostics smoke test
-        run: cargo run -p otya-engine-cli -- doctor --json
+      - name: CLI local diagnostics smoke tests
+        run: |
+          cargo run -p otya-engine-cli -- doctor --json
+          cargo run -p otya-engine-cli -- paths --json
 
       - name: Validate example configuration
         run: cargo run -p otya-engine-cli -- config validate --file examples/otya-engine.toml
@@ -53,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install MSRV Rust
         run: |
