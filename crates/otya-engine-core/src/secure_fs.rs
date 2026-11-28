@@ -290,14 +290,7 @@ pub fn create_private_file(
         return Err(SecureFsError::RunningAsRoot);
     }
 
-    if file_name.is_empty()
-        || file_name == "."
-        || file_name == ".."
-        || file_name.contains('/')
-        || file_name.contains('\0')
-    {
-        return Err(SecureFsError::InvalidFileName(file_name.to_owned()));
-    }
+    validate_file_name(file_name)?;
 
     let (directory_fd, _, _) = open_verified_private_directory(directory)?;
     let file_path = directory.join(file_name);
