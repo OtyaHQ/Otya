@@ -287,9 +287,7 @@ impl SqliteStore {
 }
 
 impl Storage for SqliteStore {
-    type Transaction<'store> = SqliteStorageTransaction<'store> where Self: 'store;
-
-    fn begin(&self) -> Result<Self::Transaction<'_>, StorageError> {
+    fn begin(&self) -> Result<Box<dyn StorageTransaction + '_>, StorageError> {
         let connection = self
             .connection
             .lock()
@@ -298,10 +296,10 @@ impl Storage for SqliteStore {
             .execute_batch("BEGIN IMMEDIATE")
             .map_err(storage_backend_error)?;
 
-        Ok(SqliteStorageTransaction {
+        Ok(Box::new(SqliteStorageTransaction {
             connection,
             completed: false,
-        })
+        }))
     }
 
     fn health_check(&self) -> Result<(), StorageError> {
@@ -422,7 +420,7 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
         Ok(entries)
     }
 
-    fn commit(mut self) -> Result<(), StorageError> {
+    fn commit(mut self: Box<Self>) -> Result<(), StorageError> {
         self.connection
             .execute_batch("COMMIT")
             .map_err(storage_backend_error)?;
