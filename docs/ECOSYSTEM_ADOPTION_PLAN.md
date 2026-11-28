@@ -3,7 +3,7 @@
 **Status:** first integration pilots prepared; production adoption is not complete.  
 **Reviewed:** 2026-11-28.
 
-Otya Engine should power shared runtime capabilities underneath Otya applications and websites. It must not absorb product ownership, user interfaces, data authority, authentication or legal/business rules.
+Otya Engine should power shared runtime capabilities underneath Otya applications and websites. It must not absorb product ownership, user interfaces, data authority, authentication or legal/business rules. First-party products must consume the same public SDK and host contracts as an unrelated independent operator; the [Independent Operator Guide](INDEPENDENT_OPERATOR_GUIDE.md) documents that model and the audited resource-retirement decisions.
 
 ## Product boundary
 
