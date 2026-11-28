@@ -1005,7 +1005,7 @@ mod tests {
         let data_dir = temporary_root("core-rollback");
         create_data_dir(&data_dir);
         let database = data_dir.join("engine.db");
-        let mut store = SqliteStore::open(&database).expect("database should initialize");
+        let store = SqliteStore::open(&database).expect("database should initialize");
         {
             let mut transaction = Storage::begin(&store).expect("transaction should begin");
             transaction.put("test.rollback", b"key", b"value").unwrap();
