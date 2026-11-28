@@ -46,3 +46,27 @@ jobs:
         run: |
           echo "This is a compile-compatibility check for the portable core."
           echo "It does not claim a complete Android app, APK, iOS app, JNI/FFI bridge or Cloudflare Worker adapter."
+
+  cloudflare-worker:
+    name: Check headless Cloudflare Workers adapter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Cloudflare Rust toolchain
+        run: |
+          rustup toolchain install 1.91.0 --profile minimal --component rustfmt --component clippy
+          rustup target add wasm32-unknown-unknown --toolchain 1.91.0
+          rustup default 1.91.0
+
+      - name: Check Cloudflare adapter formatting
+        run: cargo fmt --manifest-path platforms/cloudflare-worker/Cargo.toml -- --check
+
+      - name: Compile the headless Worker and shared core to WebAssembly
+        run: cargo check --manifest-path platforms/cloudflare-worker/Cargo.toml --target wasm32-unknown-unknown
+
+      - name: Record runtime boundary
+        run: |
+          echo "This checks a headless Rust Worker entrypoint and the shared core."
+          echo "It does not claim D1/Queues adapters, durable background operations, or a production deployment."
