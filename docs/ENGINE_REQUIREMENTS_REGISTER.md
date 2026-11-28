@@ -38,7 +38,7 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] Typed errors, request IDs and local correlation context.
 - [ ] Lifecycle hooks and graceful shutdown.
 - [ ] Module registry, compatibility checks and capability grants.
-- [x] Backend-neutral storage and transaction contract in core, with bounded namespaces, keys, values and prefix scans; latest adapter integration CI pending.
+- [x] Backend-neutral storage and transaction contract in core, with bounded namespaces, keys, values and prefix scans; Linux SQLite adapter and CLI init/check smoke tests passed CI run 265.
 - [ ] Secret, transport, clock and full platform abstractions.
 - [ ] Adapter conformance and API compatibility tests.
 - [ ] No company_id, tenant_id or end-user directory in core schema.
@@ -46,10 +46,10 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 
 ## Storage and data
 
-The Linux SQLite adapter now implements the core storage contract, namespaced key/value operations and an initial transactional schema v1-to-v2 upgrade. The latest adapter integration requires a fresh green CI run before it is marked verified. Module-owned schemas, a general migration runner, multi-process stress, online backup/restore and recovery testing remain open.
+The Linux SQLite adapter implements the core storage contract, namespaced key/value operations and an initial transactional schema v1-to-v2 upgrade; the adapter and CLI smoke tests passed Otya Engine CI run 265 on a GitHub-hosted Linux runner. Module-owned schemas, a general migration runner, multi-process stress, online backup/restore and recovery testing remain open.
 
 - [ ] No mandatory Otya-hosted or central database.
-- [ ] SQLite adapter production acceptance after current CI, concurrency, crash recovery and backup/restore gates pass.
+- [ ] SQLite adapter production acceptance after multi-process concurrency, crash recovery, backup/restore and broader platform gates pass.
 - [ ] Optional operator-managed PostgreSQL where concurrent app connectivity is needed.
 - [ ] In-memory mode restricted to tests or explicitly ephemeral workloads.
 - [ ] Transaction and idempotency semantics tested under concurrency.
