@@ -1,72 +1,101 @@
-# Customer-Operated Engine Model
+# Single-Operator Installation Model
 
 ## Core rule
 
-The person or organization installing Otya Engine owns and operates the installation. Otya supplies software and documentation; Otya does not host, monitor, back up, administer or control the customer's environment by default.
+One Otya Engine installation belongs to the person who installs and operates that installation. It is a local software component, not a hosted SaaS account and not a shared multi-tenant service.
 
-## Customer-owned responsibilities
+The engine does not ask which company is using it, register customers, provision tenant spaces, create end-user accounts, count remote users or report installations to Otya. There is no built-in company ID, tenant ID or end-user directory in the engine core.
+
+The installer/operator is the owner of the local installation. The host application remains responsible for its own product users, accounts, permissions and business identity.
+
+## What "one installation" means
+
+- One installation has one operator-owned configuration and data root.
+- It runs inside the installing OS user's security boundary.
+- Its local database, credentials, logs, cache, runtime socket and backups belong to that installation.
+- A host application may embed the library in its own process, or the operator may enable one local user service.
+- Other OS users do not automatically share the installation. They install and operate their own separate instance if they need it.
+- The operator may deliberately create multiple isolated installations, but each has separate configuration, state, process/socket and storage. The engine never merges them into a tenant pool.
+
+A company or organization may choose to install and operate Otya for its own use. That does not turn the engine into a multi-tenant SaaS product. Its application data model is chosen by the host application or installed business module, not inferred or registered by the engine.
+
+## No tenant or account control plane
+
+The engine core must not contain:
+- company/customer registration;
+- tenant provisioning or tenant routing;
+- a shared end-user account directory;
+- SaaS subscription enforcement or remote usage metering;
+- mandatory Otya identity login;
+- remote instance registration or a vendor-issued installation identity;
+- a central control plane, hosted database or remote kill switch.
+
+Local authentication to an optional management socket proves only which local OS user/process is connecting. It does not create an Otya user account. The engine's capability checks protect local engine operations; a host application must authorize its own end users.
+
+## Customer/operator responsibilities
 
 The operator selects and manages:
-- host hardware, operating system, network, DNS and firewall;
-- installation mode, configuration, service availability and capacity;
-- database or storage provider, schema backup and restore destination;
+- the host computer/server, OS account, OS updates and network;
+- installation mode and service lifecycle;
+- local configuration, database and filesystem permissions;
 - provider accounts, billing, API credentials and secret rotation;
-- user accounts, organization membership, role assignment and access review;
-- domain, TLS certificates, email identity, sender verification and consent;
-- retention, export, deletion and legal compliance for their workloads;
-- patching and updates when using a self-managed release channel;
-- incident response, disaster recovery, logs and monitoring;
-- authorization of all business operations and provider activity.
+- business application user accounts, roles and access review;
+- domains, TLS, email sender setup, consent and provider contracts;
+- data retention, export, deletion and applicable compliance;
+- backup schedules, separate backup destinations and restore drills;
+- monitoring, capacity, incident response and disaster recovery;
+- authorization of business actions and provider activity.
 
-## Otya software responsibilities
+## Otya software publisher responsibilities
 
 The publisher remains responsible for its own software distribution and stated support commitments, including:
-- accurate documentation of supported versions and known limitations;
-- secure handling of build/release signing keys;
+- accurate documentation of supported versions and limitations;
+- secure handling of release signing keys;
 - publishing fixes and security advisories according to its policy;
-- not silently collecting or transmitting customer data;
-- documenting upgrade, migration, backup and recovery behavior;
-- respecting third-party licenses and intellectual property;
-- maintaining a private vulnerability reporting route.
+- no silent collection or transmission of customer data;
+- documented upgrade, migration, backup and recovery behavior;
+- third-party license and attribution compliance;
+- a private vulnerability reporting route.
 
 A contract cannot erase non-waivable legal duties. Responsibility follows actual control, processing and applicable law; a disclaimer is not a substitute for sound architecture.
 
 ## No hidden control plane
 
 By default:
-- no Otya-hosted database or storage;
-- no Otya account is required;
-- no license check or remote kill switch is required for local operation;
-- no background telemetry or update check without opt-in;
+- no Otya-hosted database, storage, compute or control plane;
+- no Otya account or login;
+- no registration, heartbeat or remote instance inventory;
+- no telemetry or update check without opt-in;
 - no customer secrets copied to Otya;
 - no remote support access;
-- no automatic deployment or provider-side mutation.
+- no automatic provider or infrastructure mutations;
+- no network listener in embedded mode.
 
-If optional telemetry or update discovery is introduced, it must be opt-in, explain the exact fields and destination, and continue to allow local operation when disabled.
+Optional update discovery or telemetry must describe exact data, purpose and destination, remain disabled by default, and never be required for local operation.
 
-## Data ownership and portability
+## Local data ownership and portability
 
-Customer records remain in the configured customer-owned store. Provide documented export formats and import tools. Backups include a manifest with engine version, schema version, module versions, selected configuration metadata and checksums; they must not include raw provider secrets by default.
+The operator controls local records and configured stores. Provide documented export/import paths. Backups include the engine version, module versions, schema versions, timestamps and checksums, but exclude raw provider secrets by default.
 
-Do not encrypt backups with an Otya-only key. The customer controls the recovery key. Losing the customer's keys may make encrypted backups unrecoverable; document that clearly.
+Do not encrypt backups with an Otya-only key. The operator controls recovery keys. Losing the operator's keys may make encrypted backups unrecoverable; explain this plainly.
 
-## Shared installation and security
+## Linux user isolation
 
-Embedded mode inherits the host application's process boundary. Local service mode runs under a dedicated unprivileged OS account and uses authenticated local IPC. Multi-user or multi-tenant access must be explicitly configured; do not assume that local OS access implies business authorization.
+The initial Linux service target runs in the installing user's own service manager and uses that user's XDG directories. Its Unix socket is private to that user. It does not run as root or create a global service for unrelated OS users.
 
-A customer may request optional support. Support access must be temporary, visible, least-privilege, revocable and logged by the customer's own environment.
+System-wide service deployment with a dedicated account is a separate later mode and must not silently convert the single-operator product into a shared multi-user service.
 
 ## Responsibility matrix
 
-| Activity | Customer/operator | Otya publisher |
+| Activity | Operator | Otya publisher |
 |---|---|---|
-| Hardware, OS, network, DNS | Owns and operates | Documents requirements |
-| Local configuration and credentials | Owns and operates | Provides safe interfaces |
-| Provider account and provider contract | Owns and operates | Maintains optional adapter |
-| Customer backup schedule and restore destination | Owns and verifies | Provides tools and tested procedures |
-| Engine package build and published signatures | Verifies before install | Produces and protects release artifacts |
-| Engine defects and security advisories | Applies available updates | Triage, disclose and publish fixes per policy |
-| Business authorization and lawful use | Owns decisions and operations | Provides technical controls and clear limitations |
+| Hardware, OS, network and capacity | Owns and operates | Documents supported requirements |
+| Local configuration, files and credentials | Owns and operates | Provides safe interfaces |
+| Provider accounts and contracts | Owns and operates | Maintains optional adapter |
+| Backups and restore destination | Owns and verifies | Provides tools and tested procedures |
+| Release artifacts and signing | Verifies before installation | Produces and protects artifacts |
+| Engine defects and advisories | Applies updates as appropriate | Triage, disclose and publish fixes per policy |
+| Application users and business authorization | Host application/operator owns | Engine supplies technical boundaries only |
 | Optional support access | Approves and revokes | Uses only approved, time-limited access |
 
-This is a product responsibility model, not a legal opinion or a blanket transfer of all liability.
+This is a product responsibility model, not a legal opinion or blanket transfer of all liability.
