@@ -32,12 +32,21 @@ Follow the XDG Base Directory Specification for per-user paths. Resolve the envi
 | Rebuildable cache | XDG_CACHE_HOME/otya-engine/ (default ~/.cache/otya-engine/) |
 | Unix socket and transient locks | XDG_RUNTIME_DIR/otya-engine/ (typically /run/user/UID/otya-engine/) |
 
+A named local installation uses an instance namespace under each XDG base directory:
+
+- `otya paths --instance payments` displays the paths for that local instance.
+- `otya paths --instance payments --create` explicitly prepares its private directories.
+- Named instances are local path labels, not remote IDs, account names or tenant identities.
+- The default unnamed installation retains the original `otya-engine` path layout.
+
 Use restrictive permissions:
 - configuration and secret reference files: owner read/write only unless deliberately shared;
 - data directory and database: owner-only by default;
 - state/log directory: owner-only by default;
 - runtime directory: 0700;
 - Unix socket: 0600.
+
+The Linux directory-preparation implementation walks path components using already-open directory descriptors and no-follow opens. It refuses root execution, rejects unsafe parents and foreign-owned final directories, and enforces mode 0700 on final Otya directories. It never deletes existing data. It does not yet create config files or validate free-space capacity.
 
 The engine must create a runtime subdirectory with owner-only permissions and verify its owner before opening a socket. Runtime files are transient; the XDG runtime directory is not suitable for database files, backups or other durable state.
 
