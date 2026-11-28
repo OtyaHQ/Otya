@@ -7,7 +7,10 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{DiagnosticSeverity, discover_engine_paths_for, parse_config};
+use otya_engine_core::{
+    DEFAULT_CONFIG_FILE_NAME, DiagnosticSeverity, discover_engine_paths_for, parse_config,
+    starter_config_toml,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -52,6 +55,15 @@ enum Command {
 
 #[derive(Debug, Subcommand)]
 enum ConfigCommand {
+    /// Create a private starter configuration without overwriting existing files.
+    Init {
+        /// Use a separate local installation namespace (1-48 lowercase letters, digits, underscores or hyphens).
+        #[arg(long, value_name = "NAME")]
+        instance: Option<String>,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Parse and validate a TOML configuration file.
     Validate {
         #[arg(long, value_name = "FILE")]
@@ -108,6 +120,7 @@ fn run(cli: Cli) -> Result<(), String> {
             instance,
         } => show_paths(json, create, instance.as_deref())?,
         Command::Config { command } => match command {
+            ConfigCommand::Init { instance, json } => init_config(instance.as_deref(), json)?,
             ConfigCommand::Validate { file, json } => validate_config(&file, json)?,
         },
     }
@@ -240,6 +253,78 @@ fn show_paths(json: bool, create: bool, instance: Option<&str>) -> Result<(), St
     }
 
     Ok(())
+}
+
+fn init_config(instance: Option<&str>, json: bool) -> Result<(), String> {
+    let paths = discover_engine_paths_for(instance).map_err(|error| error.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    {
+        let directory = otya_engine_core::prepare_engine_config_directory(&paths)
+            .map_err(|error| error.to_string())?;
+        let starter = parse_config(starter_config_toml())
+            .map_err(|error| format!("internal starter configuration is invalid: {error}"))?;
+        let validation = starter.validate();
+        if !validation.is_valid() {
+            return Err("internal starter configuration failed validation".to_owned());
+        }
+
+        let config_path = otya_engine_core::create_private_file(
+            &paths.config_dir,
+            DEFAULT_CONFIG_FILE_NAME,
+            starter_config_toml().as_bytes(),
+        )
+        .map_err(|error| match error {
+            otya_engine_core::SecureFsError::FileAlreadyExists(path) => format!(
+                "{} already exists; it was not changed. Validate or back it up before making any manual changes.",
+                path.display()
+            ),
+            other => other.to_string(),
+        })?;
+
+        if json {
+            let output = serde_json::json!({
+                "created": true,
+                "path": config_path,
+                "mode": "0600",
+                "config_directory": {
+                    "path": directory.path,
+                    "created": directory.created,
+                    "permissions_hardened": directory.permissions_hardened
+                },
+                "instance": paths.instance,
+                "validation": validation
+            });
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .map_err(|error| format!("could not encode initialization result: {error}"))?
+            );
+        } else {
+            println!("Created private Otya Engine configuration:");
+            println!("file: {}", config_path.display());
+            println!("mode: 0600 (owner read/write only)");
+            println!(
+                "instance: {}",
+                paths.instance.as_deref().unwrap_or("default")
+            );
+            for diagnostic in &validation.diagnostics {
+                let level = match diagnostic.severity {
+                    DiagnosticSeverity::Warning => "warning",
+                    DiagnosticSeverity::Error => "error",
+                };
+                println!("[{level}] {}: {}", diagnostic.code, diagnostic.message);
+            }
+            println!("No existing configuration or data was overwritten.");
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = paths;
+        Err("secure configuration initialization is currently implemented only for Linux".to_owned())
+    }
 }
 
 fn validate_config(file: &Path, json: bool) -> Result<(), String> {
