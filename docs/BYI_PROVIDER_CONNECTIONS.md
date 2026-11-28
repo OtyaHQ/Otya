@@ -172,6 +172,48 @@ The control plane is not in the request path for every application request. Alre
 
 Otya may build, package and upload application artifacts with operator approval. It does not supply compute or storage; the operator pays the hosting provider directly. If the operator has not connected a provider or configured local service, features needing that dependency remain unavailable and the console explains what is missing.
 
+## 8. Execution and performance model
+
+Otya should not put its management server in the hot path of every application request.
+
+The management/control plane configures projects, validates provider accounts, prepares resources, assigns grants, injects runtime secrets and manages releases. After deployment, application requests should run in the application's selected host/runtime and use the appropriate local Otya module, native provider binding or direct provider client.
+
+Examples:
+- A Cloudflare Worker uses its own D1/R2/KV/Queues bindings when those resources are part of the same Worker account/runtime. Do not route those operations through the Otya Console or call Cloudflare's REST API unnecessarily from inside the Worker.
+- A browser may use a provider's public client key only when the provider's documented security controls make that safe (for example Supabase publishable key plus correctly configured RLS). Privileged secrets remain in backend runtimes.
+- A Linux application may use the local Otya service over authenticated IPC or embed the library. A local database/file operation should not make an unnecessary remote round trip.
+- A workload deployed to a user's account should continue operating if the Otya management console, laptop or local controller is offline.
+
+Otya's performance is composed of the portable Rust core, host/runtime overhead, adapter overhead and external provider latency. Otya can optimize its own code, batching, connection reuse, concurrency, serialization and retries; it cannot guarantee the uptime, response time, quotas or geographic latency of a provider the operator chose.
+
+The platform should measure and expose:
+- local Engine execution time separately from external provider time;
+- queue wait, retry and provider throttling separately from handler latency;
+- adapter and serialization overhead;
+- request/operation IDs across service boundaries;
+- timeouts, cancellation and bounded concurrency;
+- cost/usage only when the provider exposes reliable usage data and the operator grants read scope.
+
+Never hide provider latency inside one generic "Otya response time". Never retry non-idempotent operations without an idempotency/reconciliation contract. A provider outage should not stop unrelated local modules or applications.
+
+## 9. Build any application or system
+
+The Engine is not a Rust-only app framework. Rust is the preferred implementation language for the core and native embedded SDK, but external developers should be able to build applications in any language that can call a supported, documented interface.
+
+Target developer interfaces:
+- Rust embedded SDK for in-process/native applications;
+- versioned HTTPS/JSON management and runtime APIs with OpenAPI specifications for TypeScript, Python, Go, Java, .NET, PHP, Ruby and other ecosystems;
+- authenticated local IPC for applications running beside an Otya service;
+- stable C ABI for languages that need native embedding;
+- optional language SDKs generated from the same versioned contracts;
+- optional .ot manifests/configuration for declarative project and service wiring, without making .ot mandatory for app source code.
+
+A developer keeps source code in their own repository and controls the frontend, domain model, product authorization and deployment strategy. Otya provides optional runtime contracts and services, provider adapters, identity primitives, UI components, templates, test harnesses and management tools.
+
+An application must not require an Otya-hosted account, Otya repository, Otya runtime host or connection to another operator's installation. It can consume released SDK packages or documented APIs from its own installation.
+
+The repository must publish an explicit supported-use license and contribution terms before claiming unrestricted third-party use, redistribution or contributions. The license decision is still open; repository visibility alone is not a grant of reuse rights.
+
 ## 8. Capability catalogue and honest readiness
 
 Every service entry must show whether it is built into Otya or requires an external provider; local adapter availability and each external provider adapter; authentication method and required scopes; resource types and supported operations; whether an operation is read-only, mutating, destructive or billable; development/test/production support; limitations, provider quotas and regional constraints; required credentials and where each will be stored; health and last-verified state; and fallback behavior or an explicit statement that no fallback exists.
