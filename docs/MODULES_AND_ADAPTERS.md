@@ -8,6 +8,14 @@ The core is single-operator and tenant-unaware. It does not create company/custo
 
 Do not put provider-specific SDK calls throughout business modules.
 
+## Applications versus modules
+
+An application is a separately built product with its own frontend, domain logic, end-user model, API namespace and release lifecycle. It may be a website backend, commerce service, media API or internal tool.
+
+A module is reusable functionality installed or linked into an application/engine environment, such as audit, messaging, payments orchestration or inventory primitives. Provider adapters translate module contracts to external services. The application decides which modules it needs; the engine remains generic. See [Applications on Otya](APPLICATIONS_ON_OTYA.md).
+
+The experimental `otya-engine-sdk` currently provides an in-process application manifest, exact route registry and host-supplied auth/capability context. The example catalog application uses that contract. It is not yet a production plugin loader or an asynchronous web framework.
+
 ## Module classes
 
 1. **Core modules:** lifecycle, configuration, authorization hooks, audit, operation state and health.
