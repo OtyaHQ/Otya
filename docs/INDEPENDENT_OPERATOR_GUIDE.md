@@ -9,7 +9,7 @@ Otya Engine is software that an application developer or operator installs and u
 
 A person or organization runs its own installation in its own environment. It controls the host, app source, configuration, storage, credentials, network, provider accounts, backups and release process. Another organization runs a separate installation. The installations do not share an Otya customer database and do not register themselves with Otya.
 
-An operator can run more than one application in its own trust boundary. Separate applications may use one operator-managed Engine installation when sharing that boundary is intentional, or separate named installations when they need stronger configuration, data or lifecycle separation. This is not a multi-tenant pool for unrelated customers.
+An operator can run many applications inside one Engine installation. The installation provides a local/operator-controlled management plane with workspaces, project and component inventory, environment configuration, shared-service grants, deployment plans, health, backups and audit. Each project remains separately versioned, secured, deployed and recoverable. Projects may consume shared identity, provider adapters, jobs, notifications or observability only through explicit scoped grants. Use separate named installations when a stronger operator or trust boundary is required. This is not a global Otya-hosted control plane or a multi-tenant pool for unrelated customers. See [Multi-project operator architecture](MULTI_PROJECT_OPERATOR_ARCHITECTURE.md).
 
 ## How an independent developer builds on it
 
