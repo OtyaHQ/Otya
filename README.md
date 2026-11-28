@@ -23,6 +23,10 @@ The engine does not silently create a central Otya service or send customer data
 
 Otya is the foundation developers build on, not one monolithic application. The experimental `otya-engine-sdk` introduces application manifests, API routes, host-supplied authentication context and capability checks. The example catalog application and its responsive website demonstrate how a separate frontend calls an Otya-powered API. The example is stateless demonstration data, not a production commerce system. See [Applications on Otya](docs/APPLICATIONS_ON_OTYA.md), [example catalog app](examples/catalog-app/README.md) and [Cloudflare Worker host adapter](platforms/cloudflare-worker/README.md).
 
+## Build as an independent operator
+
+A developer keeps an application in their own repository and installs Otya only as a dependency/runtime. Every operator controls their own installation, data, provider accounts and infrastructure. The current SDK is experimental and unpublished; the external service API and application scaffolder are not shipped yet. See [Building Independent Applications on Otya](docs/INDEPENDENT_OPERATOR_GUIDE.md) for what works today, the planned integration forms, and the audited repository/Worker retirement decisions.
+
 ## The Media Kit design lesson
 
 Omy Play uses the third-party media_kit package as an embedded playback engine. Its modular packaging separates the shared player API from optional video rendering and native media libraries. Otya should learn from this packaging pattern:
