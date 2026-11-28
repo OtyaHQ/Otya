@@ -30,16 +30,10 @@
 
 ## CI evidence
 
-- The prior Linux/SQLite baseline is verified in Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), but it predates the current generic storage contract and CLI storage wiring.
-- Android and WebAssembly portable-core compile checks passed in Otya Mobile and Web Portability [run 10](https://github.com/OtyaHQ/Otya/actions/runs/46143442905).
-- The current storage integration and CLI smoke tests are still awaiting a successful full Rust quality run on the latest branch head.
-- Configuration initializer was verified in Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062); it is also included in the latest full run.
-- Latest full branch verification: Otya Engine CI [run 193](https://github.com/OtyaHQ/Otya/actions/runs/46141897437), commit `f560e0a0882d75bd497f64aadf413bf49bb35c3c`.
-- Stable Rust quality job: **passed** — rustfmt, Clippy, all workspace tests (including SQLite initialisation, WAL, schema identity, reopen, permission hardening, foreign-database preservation and transaction rollback), CLI smoke tests, generated/example configuration validation and release build.
-- Rust 1.85 minimum-version job: **passed** — workspace compile and tests for the full workspace, including the optional SQLite crate.
-- The SQLite adapter uses the host system SQLite library. CI installs `libsqlite3-dev` and `pkg-config`; it does not enable the bundled SQLite feature.
-
-These runs verify the current Rust workspace, SQLite contract/CLI smoke flow and portable-core compilation for Android/WebAssembly targets. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, an Android APK/FFI application, an iOS application, the future service daemon, provider APIs or production readiness.
+- Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), code commit `148f837595e4e42d314fa8b59234fb5363111f01`: **passed** — rustfmt, Clippy, all workspace tests, CLI diagnostics, SQLite init/check smoke tests, example configuration validation, release build and Rust 1.85 compile/tests.
+- Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), same code commit: **passed** — portable core compile checks for Android arm64, Android armv7, Android x86_64 and `wasm32-unknown-unknown`.
+- The subsequent branch commits update documentation; the tested code is unchanged from the code commit above.
+- The Codespaces devcontainer has been committed, but first-launch usability on a real phone browser has not yet been manually validated.
 
 ## Not yet implemented
 
