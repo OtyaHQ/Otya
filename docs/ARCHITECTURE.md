@@ -4,31 +4,33 @@
 
 ## 1. Product definition
 
-Otya Engine is a Rust-based, independently installable and embeddable engine kit. It becomes part of the customer's application or operating environment. The customer supplies and operates the host machine, storage, network, accounts, credentials, backups and deployment environment.
+Otya Engine is a Rust-based, independently installable and embeddable engine kit. It belongs to the person who installs and operates that installation. It is not a hosted SaaS product and does not provide company, customer, tenant or end-user account management.
 
-Otya does not operate a mandatory cloud control plane, hosted compute service or central customer database. The engine must boot and perform local work without contacting Otya infrastructure.
+The host OS and its user account establish the primary installation boundary. One installation has its own configuration, storage, local credentials, logs, runtime socket and lifecycle. Other unrelated OS users do not share it. A person may deliberately install multiple isolated copies, but those copies do not share engine state.
 
-The engine is distinct from OEnd, OID and Otya's existing products. Any integration with those systems is optional and uses explicit versioned contracts.
+Otya does not operate mandatory hosted compute, a cloud control plane or a central customer database. The engine must perform local work without contacting Otya infrastructure.
+
+The host application owns its product users, business entities, permissions and account model. Otya Engine is unaware of those identities unless a host explicitly passes a narrowly scoped operation context through an adapter. The core does not store tenant IDs or maintain a global user directory.
 
 ## 2. Architecture at a glance
 
 ```text
-Host application / customer system
+One operator / one OS user
           |
-          +-- Embedded Rust library (primary)
+          +-- Host application embeds the Rust library
           |       |
           |       +-- Core lifecycle and configuration
-          |       +-- Security and capability checks
+          |       +-- Local capability enforcement
           |       +-- Module registry
           |       +-- Storage / transaction interfaces
-          |       +-- Operations / events / outbox
-          |       +-- Provider adapter interfaces
+          |       +-- Operations / outbox / audit
+          |       +-- Optional provider adapters
           |
-          +-- Optional local Otya service
-          |       +-- Background jobs and schedulers
-          |       +-- Webhook intake when explicitly enabled
-          |       +-- Local IPC API
-          |       +-- Health and diagnostic endpoints
+          +-- Optional per-user Otya service
+          |       +-- Background jobs and scheduler
+          |       +-- Webhook intake only when enabled
+          |       +-- Private Unix-domain socket
+          |       +-- Local health and diagnostics
           |
           +-- Operator CLI and installation kit
                   +-- install / configure / doctor
@@ -36,114 +38,113 @@ Host application / customer system
                   +-- upgrade / rollback / uninstall
 ```
 
-The embedded library, optional service and CLI must reuse the same core contracts. The local service is not required for embedded use.
+Embedded library, optional per-user service and CLI reuse the same core contracts. The local service is not required for embedded use.
 
 ## 3. Product layers
 
 ### Core Rust library
 
-Owns configuration parsing, lifecycle state, typed errors, request context, permissions, module registration, provider-neutral operation state and stable extension interfaces. The core must avoid hidden network access and ambient filesystem access.
+Owns configuration parsing, lifecycle state, typed errors, operation context, capability checks, module registration, provider-neutral operation state and stable extension interfaces. It does not create users, companies, tenants or a remote installation record. It avoids hidden network access and ambient filesystem access.
 
 ### Operator CLI and installer
 
-Owns installation checks, configuration validation, local service management, migrations, backup/restore orchestration, health diagnostics and upgrade/rollback commands. Privileged installation steps must be narrow and auditable.
+Owns local installation checks, configuration validation, per-user service management, migrations, backup/restore orchestration, health diagnostics and upgrade/rollback commands. Privileged steps are narrow, explicit and auditable.
 
-### Optional local service
+### Optional per-user service
 
-Owns durable background execution when the customer enables it: scheduled work, leased job processing, outbox dispatch, webhook intake, reconciliation and local API/IPC. It listens on a Unix domain socket or platform-equivalent local IPC by default. A TCP listener is opt-in, authenticated and documented.
+Owns durable background execution when the operator enables it: scheduled work, leased jobs, outbox dispatch, optional webhook intake, reconciliation and local API/IPC. The first service target runs under the installing OS user's account. It listens on a private Unix-domain socket with owner-only permissions. There is no public TCP listener by default.
+
+It is not a shared service for unrelated OS users. If another OS user needs Otya, that user installs and operates a separate instance.
 
 ### SDK and platform bindings
 
-The Rust API is canonical. C ABI/FFI provides a stable native boundary for Flutter/Dart and Python packages. Each wrapper is thin and maps platform-native ownership, threading and error semantics explicitly. Do not build separate business logic implementations in Dart, Python or TypeScript.
+The Rust API is canonical. A deliberately versioned C ABI provides a native boundary for Flutter/Dart and Python packages. Each wrapper is thin and defines handle ownership, buffer lifetimes, threading and error semantics. Do not build separate business-logic implementations in Dart, Python or TypeScript.
 
 ### Adapters
 
-Adapters connect the engine to customer-selected databases, files, secret stores, identity systems, messaging providers, cloud platforms and developer tools. They are optional, least-privilege and separately versioned.
+Adapters connect to operator-selected databases, files, secret stores, identity systems, messaging providers, cloud platforms and developer tools. They are optional, least-privilege and separately versioned.
 
 ## 4. Operating modes
 
-1. **Embedded mode:** a host app links the Rust library. The caller provides its execution lifecycle and any required storage. No daemon is started.
-2. **Local service mode:** one local engine service coordinates background work for one or more trusted local apps. Local IPC is the default.
-3. **Customer-hosted mode:** a customer may choose to run the same service on their own server or VPS. The customer owns the infrastructure and availability.
+1. **Embedded mode:** the host application links the Rust library. The application owns the process lifecycle. No daemon, listener, registration or network call is started by the engine.
+2. **Per-user service mode:** the installing OS user runs one local engine service for that user's trusted applications. The service has its own owner-only state paths and local socket.
+3. **Customer-hosted mode:** an operator may run the same service on their own Linux computer or server. It remains one operator-owned installation, not a shared tenant service.
 
-A single-node installation is the initial target. Multi-node clustering, distributed scheduling and multi-region replication are not first-release promises.
+A single-node, single-operator installation is the first target. Multi-user shared hosting, tenant routing, clustering and multi-region replication are explicitly out of scope.
 
 ## 5. Storage and database boundary
 
 The engine is not a database product and does not host or operate a database for customers.
 
 - Storage is defined through explicit, versioned traits and transaction contracts.
-- Embedded SQLite is an optional local adapter for durable single-node operation.
-- PostgreSQL is an optional customer-managed adapter for deployments needing shared concurrent access.
+- Embedded SQLite is an optional local adapter for a single operator-owned installation.
+- PostgreSQL is an optional customer-managed adapter for a customer's own deployment where concurrent processes or remote application clients require it. It does not make Otya a multi-tenant service.
 - In-memory storage is for tests or explicitly ephemeral workloads only.
-- File and object storage are separate adapters; large binary objects should not be forced into relational tables.
-- Every adapter must publish transaction semantics, locking/concurrency behavior, migration rules, backup/restore behavior and supported versions.
+- Files and object storage are separate adapters; large binary objects should not be forced into relational tables.
+- Every adapter publishes transaction semantics, locking/concurrency behavior, migration rules, backup/restore behavior and supported versions.
 
-Modules that require durability must refuse to start if configured with an ephemeral adapter. Do not silently downgrade financial or audit data to in-memory storage.
+Modules requiring durability must refuse to start with ephemeral storage. Never silently downgrade financial or audit records to memory.
 
 ## 6. Modules and extension boundary
 
-Built-in first-party modules are Rust crates compiled against versioned engine interfaces. They register explicit capabilities and migrations and cannot bypass core authorization or transaction boundaries.
+Built-in first-party modules are Rust crates compiled against versioned engine interfaces. They register capabilities and migrations and cannot bypass core authorization or transaction boundaries.
 
-Third-party extensions are not arbitrary native dynamic libraries loaded into the engine process. The first safe extension strategy is a separately supervised process with a versioned, authenticated local protocol. A sandboxed WebAssembly Component Model adapter may be evaluated later as an optional isolation boundary. It is a module ABI, not an Otya programming language.
+The engine does not supply a tenant/user directory. A business module may store records relevant to the installing operator's own application, but any end-user/company model belongs to that application/domain module and remains local to that installation.
 
-Provider-specific operations live in provider adapters. Business modules own business meaning, authorization and domain invariants. The core owns common reliability and security primitives.
+Third-party extensions are not arbitrary native libraries loaded into the privileged engine process. The first safe extension strategy is a separate process behind a narrow authenticated local protocol. A sandboxed WebAssembly Component Model may be evaluated later as an optional module ABI; it is not an Otya language.
 
 ## 7. Provider architecture
 
-Cloudflare, GitHub, Resend and Firebase are optional customer-configured integrations.
+Cloudflare, GitHub, Resend and Firebase are optional operator-configured integrations.
 
-- GitHub is primarily a source-control and release/CI provider; it is not required for an installed instance to run.
-- Cloudflare is an optional edge, storage or deployment provider; the engine is not dependent on Cloudflare Workers.
-- Resend is an optional email transport; the engine can also expose SMTP or other transport adapters.
-- Firebase is optional for mobile messaging or selected client-integrity integrations; it is not the engine's mandatory identity authority or database.
+- GitHub is a source-control and release/CI provider; it is not needed to run an installed engine.
+- Cloudflare is an optional edge/infrastructure provider; Otya is not dependent on Workers.
+- Resend is optional email transport; SMTP and other providers remain possible.
+- Firebase is optional for mobile push or selected app-integrity integrations; it is not the engine's mandatory database or identity authority.
 
-Every adapter declares scopes, secrets required, outbound data, webhook verification, rate limits, timeouts, retries, idempotency support, reconciliation support, health checks and error mapping. Credentials are injected at runtime from customer-controlled secret stores.
+Every adapter declares scopes, secrets, outbound data, webhook verification, rate limits, timeouts, retries, idempotency, reconciliation, health checks and error mapping. Credentials are injected at runtime from operator-controlled secret stores.
 
 ## 8. Reliability and data lifecycle
 
 Reliable operations require:
-
 - durable idempotency keys and request digests;
 - transactional outbox and webhook inbox patterns;
 - leased jobs, bounded retries, exponential backoff and jitter;
 - circuit breakers and provider rate-limit awareness;
 - explicit unknown outcomes and reconciliation before unsafe retries;
 - append-only audit events for sensitive operations;
-- crash-safe startup, graceful shutdown and job lease recovery;
+- crash-safe startup, graceful shutdown and lease recovery;
 - versioned migrations and interrupted-upgrade recovery;
 - encrypted, checksummed backups and restore drills;
 - data export and deletion paths.
 
-Exactly-once effects across remote providers cannot be guaranteed by the engine alone. The engine uses at-least-once delivery with idempotency and reconciliation where provider capabilities permit, and exposes uncertainty rather than claiming false success.
+Exactly-once effects across remote providers cannot be guaranteed by the engine alone. Use at-least-once delivery with provider idempotency and reconciliation where available, and expose uncertainty rather than claiming false success.
 
-## 9. Security model
+## 9. Linux and security model
 
-- Run the engine under an unprivileged OS account by default.
-- Deny access unless a module is explicitly granted the needed capability.
-- Keep secrets out of source, logs, diagnostic bundles and plain configuration files.
-- Bind local management interfaces to local IPC by default.
-- Separate operator, application, tenant and end-user permissions.
-- Validate and size-limit all inbound requests and webhook bodies.
-- Verify signatures, timestamps and replay identifiers before accepting webhooks.
-- Pin dependencies, produce an SBOM and sign release artifacts.
-- Support vulnerability reporting, patch notices and a defined security support period.
-- Keep telemetry disabled by default; any export requires operator opt-in.
+- Run as the installing OS user by default; never require root for ordinary embedded or per-user service operation.
+- Keep configuration, durable data, logs, cache and runtime socket in separate per-user directories.
+- Use owner-only file and socket permissions; reject symlink/path escapes when creating managed files.
+- Use Linux process isolation and systemd resource/sandbox controls where available and verified.
+- Do not treat namespaces, cgroups, seccomp or AppArmor as universally available. Detect platform support and document limitations.
+- Do not expose local IPC over TCP by default.
+- Keep secrets out of source, plain config, logs and diagnostics.
+- No tenant/end-user authorization layer in engine core. The host app authorizes its own users.
 
 ## 10. Existing Otya ecosystem boundary
 
-OEnd remains the backend and integrations platform for Otya's own products. OID remains the existing person-identity service. Omy Play and Opoint retain their product data and product-specific authorization.
+OEnd remains the backend and integrations platform for Otya's own products. OID remains the existing person-identity service. Omy Play and Opoint retain product data and product-specific authorization.
 
-Otya Engine must work independently. It may later expose optional adapters for OEnd/OID, but cannot assume access to Otya cloud services or make them mandatory for startup, local storage or local business operations.
+Otya Engine must work independently. It may later expose optional OEnd/OID adapters, but must not assume access to Otya cloud services or require Otya identities for startup or local operation.
 
 ## 11. Supported-platform strategy
 
 - Initial target: supported Linux distributions on x86_64 and aarch64.
-- Embedded library API: Rust first; stable C ABI for native host bindings.
-- Flutter/Dart and Python wrappers follow only after the FFI contract and lifecycle tests are stable.
-- Windows and macOS service installers are later targets after the Linux lifecycle is proven.
-- Cloudflare Workers/Wasm execution is an optional adapter/target, not the canonical deployment.
+- Embedded API: Rust first; a versioned C ABI for native host bindings.
+- Flutter/Dart and Python wrappers follow only after FFI lifecycle tests.
+- Windows and macOS installation targets follow after Linux lifecycle is reliable.
+- Cloudflare Workers/Wasm is an optional adapter target, not canonical deployment.
 
 ## 12. Release acceptance
 
-A release is not accepted because code compiles. It must pass build, unit, integration, failure-injection, compatibility, install/upgrade/rollback/uninstall, backup/restore, security, resource-limit and documentation gates. Publish the exact platforms, features, adapters and limitations tested.
+A release requires build, unit, integration, failure-injection, compatibility, install/upgrade/rollback/uninstall, backup/restore, security, resource-limit and documentation evidence. Publish exact platforms, features, adapters and limitations tested.
