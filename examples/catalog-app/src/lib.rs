@@ -90,7 +90,6 @@ impl Application for CatalogApplication {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
