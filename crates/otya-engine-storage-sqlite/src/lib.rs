@@ -287,7 +287,9 @@ impl SqliteStore {
 }
 
 impl Storage for SqliteStore {
-    fn begin(&self) -> Result<Box<dyn StorageTransaction + '_>, StorageError> {
+    type Transaction<'store> = SqliteStorageTransaction<'store> where Self: 'store;
+
+    fn begin(&self) -> Result<Self::Transaction<'_>, StorageError> {
         let connection = self
             .connection
             .lock()
@@ -296,10 +298,10 @@ impl Storage for SqliteStore {
             .execute_batch("BEGIN IMMEDIATE")
             .map_err(storage_backend_error)?;
 
-        Ok(Box::new(SqliteStorageTransaction {
+        Ok(SqliteStorageTransaction {
             connection,
             completed: false,
-        }))
+        })
     }
 
     fn health_check(&self) -> Result<(), StorageError> {
@@ -320,7 +322,8 @@ impl Storage for SqliteStore {
     }
 }
 
-struct SqliteStorageTransaction<'connection> {
+/// Scoped transaction that holds the SQLite connection lock until commit or drop.
+pub struct SqliteStorageTransaction<'connection> {
     connection: MutexGuard<'connection, Connection>,
     completed: bool,
 }
@@ -419,17 +422,9 @@ impl StorageTransaction for SqliteStorageTransaction<'_> {
         Ok(entries)
     }
 
-    fn commit(mut self: Box<Self>) -> Result<(), StorageError> {
+    fn commit(mut self) -> Result<(), StorageError> {
         self.connection
             .execute_batch("COMMIT")
-            .map_err(storage_backend_error)?;
-        self.completed = true;
-        Ok(())
-    }
-
-    fn rollback(mut self: Box<Self>) -> Result<(), StorageError> {
-        self.connection
-            .execute_batch("ROLLBACK")
             .map_err(storage_backend_error)?;
         self.completed = true;
         Ok(())
@@ -790,7 +785,7 @@ mod tests {
             invalid.put("media", b"key", &big_value),
             Err(StorageError::ValueTooLarge)
         );
-        invalid.rollback().expect("invalid-operation transaction should roll back");
+        drop(invalid); // Dropping an unfinished transaction must roll it back.
 
         drop(store);
         let _ = fs::remove_dir_all(data_dir.parent().expect("test parent should exist"));
