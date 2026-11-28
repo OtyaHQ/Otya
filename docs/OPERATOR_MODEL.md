@@ -2,11 +2,11 @@
 
 ## Core rule
 
-One Otya Engine installation belongs to one operator. The operator may be a person or an organization. The engine is a local software component, not a hosted SaaS account and not a shared multi-tenant service.
+One Otya Engine installation belongs to one operator. The operator may be a person or an organization. The complete distribution is a local, self-hosted application platform, not a hosted SaaS account and not a shared multi-tenant service.
 
-The engine does not ask which company is using it, register customers, provision tenant spaces, create end-user accounts, count remote users or report installations to Otya. There is no built-in company ID, tenant ID or end-user directory in the engine core.
+The installation may maintain its own local operator/workspace/project records, identity realm, staff/user directory, login portal, groups, service clients and application registrations. Those records exist only inside that operator's installation. Otya does not register customers, share identities across installations, count remote users or report installations to a central Otya service.
 
-The installer/operator is the owner of the local installation. The host application remains responsible for its own product users, accounts, permissions and business identity.
+The operator owns the local installation. Its built-in identity provider may authenticate people across selected company apps, while each host application remains responsible for its product-specific roles, resource permissions, business identity and authorization.
 
 ## What one installation means
 
@@ -20,22 +20,21 @@ The installer/operator is the owner of the local installation. The host applicat
 
 A company or organization may choose to install and operate Otya for its own use. That does not turn the engine into a multi-tenant SaaS product. Its application data model is chosen by the host application or installed business module, not inferred or registered by the engine.
 
-## No tenant or account control plane
+## No global or cross-operator control plane
 
-The engine core must not contain:
-- company/customer registration;
-- tenant provisioning or tenant routing;
-- a shared end-user account directory;
-- SaaS subscription enforcement or remote usage metering;
-- mandatory Otya identity login;
-- remote instance registration or a vendor-issued installation identity;
-- a central control plane, hosted database or remote kill switch.
+The product must not contain:
+- a global Otya customer or user directory shared across installations;
+- cross-operator tenant provisioning or tenant routing;
+- mandatory Otya-hosted identity login or remote installation registration;
+- vendor-controlled account suspension or a remote kill switch;
+- a mandatory hosted control plane or hosted database.
 
-Local authentication to an optional management socket proves only which local OS principal is connecting. It does not create an Otya user account. The engine's capability checks protect local engine operations; a host application must authorize its own end users.
+The local installation may contain its own identity service, user/group directory, operator console, workspace/project registry and local management API. Local accounts belong to that installation only. The Engine identity service authenticates principals; project applications still authorize business actions and resource access.
 
 ## Customer/operator responsibilities
 
 The operator selects and manages:
+- installation identity policy, owner recovery methods, staff invitations, role assignments and external identity federation;
 - the host computer/server, OS account, OS updates and network;
 - installation mode and service lifecycle;
 - local configuration, database and filesystem permissions;
@@ -94,7 +93,7 @@ The default Linux service target runs in the installing user's own service manag
 | Backups and restore destination | Owns and verifies | Provides tools and tested procedures |
 | Release artifacts and signing | Verifies before installation | Produces and protects artifacts |
 | Engine defects and advisories | Applies updates as appropriate | Triage, disclose and publish fixes per policy |
-| Application users and business authorization | Host application/operator owns | Engine supplies technical boundaries only |
+| Application resource permissions and business authorization | Host application/operator owns | Engine supplies identity and policy primitives, not product decisions |
 | Optional support access | Approves and revokes | Uses only approved, time-limited access |
 
 This is a product responsibility model, not a legal opinion or blanket transfer of all liability.
