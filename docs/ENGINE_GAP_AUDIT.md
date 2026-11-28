@@ -21,20 +21,21 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-At Otya Engine CI run 115, commit `942041fa685ce1e00527e4d7011669ece324d892`, the branch contains:
+At Otya Engine CI [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062), commit `cb3d33e29e6de51ea13ee92ef3587782d1eec2fd`, the branch contains:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
-- local CLI commands for version, doctor, paths and configuration validation;
+- local CLI commands for version, doctor, paths, configuration initialization and configuration validation;
 - Linux XDG path resolution for config, data, state, cache and optional runtime directories;
 - named local instance path separation and validation;
 - explicit private-directory preparation via safe rustix directory-descriptor operations;
 - no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
-- tests for default paths, overrides, instance separation, unsafe instance names, create/idempotency, mode hardening, symlink rejection, unsafe parent rejection and relative paths;
-- stable Rust formatting, Clippy, unit tests, CLI smoke checks, example validation and release build;
+- Linux create-only config initialization that writes `otya-engine.toml` with mode 0600 inside a verified directory; existing files and symlinks are never followed or overwritten;
+- tests for default paths, overrides, instance separation, unsafe instance names, directory create/idempotency, mode hardening, symlink rejection, unsafe parent rejection, private-file mode, existing-file refusal and invalid file names;
+- stable Rust formatting, Clippy, unit tests, CLI config-init/no-overwrite smoke checks, generated/example config validation and release build;
 - Rust 1.85 minimum-version compile and test pass.
 
-The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. Directory preparation remains separate from configuration. A preliminary `otya config init` now creates the initial configuration file exclusively; its new tests are awaiting CI verification. It does not update an existing file.
+The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. The create-only initializer does not update existing files, replace configs atomically, create databases or implement migrations.
 
 ## Gap register
 
@@ -43,7 +44,7 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 | Independent installation boundary | Partially implemented; configuration, named local paths and filesystem isolation encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
 | No Otya control plane | Documented; current CLI has no remote calls | Automated network-egress tests proving local startup and embedded operation never phone home |
 | Linux directory discovery | XDG resolver and private directory preparation implemented and CI-verified | Physical distribution tests, arbitrary custom roots, free-space checks and broader install lifecycle |
-| Configuration lifecycle | Strict parsing and validation are CI-verified; create-only initializer implemented but fresh CI verification is pending | Atomic replacement, safe backup/restore, schema migration, and crash/power-loss recovery |
+| Configuration lifecycle | Strict parsing and Linux create-only initialization are CI-verified; files are 0600 and existing files are never replaced | Atomic replacement, safe backup/restore, schema migration, and crash/power-loss recovery |
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
@@ -89,7 +90,7 @@ The filesystem tests and smoke command verify the behavior on the GitHub-hosted 
 
 - Explicit install roots and override rules, including multiple isolated installs by one operator.
 - Secure directory creation with owner-only permissions.
-- Safe create-only file creation/opening that resists symlink substitution and path traversal (implemented; fresh CI run pending).
+- Safe create-only file creation/opening that resists symlink substitution and path traversal (implemented and CI-verified).
 - Atomic config replacement, backups and schema migration.
 - Installer preview, confirmation and recovery.
 

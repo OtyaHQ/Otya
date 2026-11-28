@@ -13,7 +13,7 @@
 - Named local instances with validated names and separate config/data/state/cache/runtime path namespaces.
 - Explicit `otya paths --create` action to prepare the selected installation directories.
 - Linux filesystem preparation walks paths through directory file descriptors, refuses symlink components, rejects unsafe parent directories and foreign-owned final directories, refuses root execution, and applies owner-only 0700 permissions to final Otya directories.
-- Filesystem tests cover create/idempotency, permission hardening, symlink rejection, unsafe writable parent rejection and relative paths.
+- Filesystem tests cover directory create/idempotency, permission hardening, symlink rejection, unsafe writable parent rejection, relative paths, private-file mode 0600, existing-file refusal, symlink-target refusal and invalid file names.
 - CLI smoke test creates an isolated named instance on a non-root Linux runner.
 - Read-only `otya paths` inspection does not create or modify files.
 - Linux `otya config init` prepares only the config directory and exclusively creates `otya-engine.toml` with mode 0600; it refuses existing files and does not follow symlinked parents.
@@ -24,12 +24,12 @@
 
 ## CI evidence
 
-- Workflow: Otya Engine CI, run 115.
-- Pull request: #2, tested head commit `942041fa685ce1e00527e4d7011669ece324d892`.
-- Stable Rust quality job: **passed** — rustfmt, Clippy, workspace tests, doctor and paths CLI smoke tests, named-instance directory creation, example configuration validation and release build.
+- Workflow: Otya Engine CI, [run 153](https://github.com/OtyaHQ/Otya/actions/runs/46140624062).
+- Pull request: #2, tested implementation commit `cb3d33e29e6de51ea13ee92ef3587782d1eec2fd`.
+- Stable Rust quality job: **passed** — rustfmt, Clippy, workspace tests, doctor and paths CLI smoke tests, named-instance directory creation, secure config initialization with mode check, generated config validation, no-overwrite/content-preservation check, example configuration validation and release build.
 - Rust 1.85 minimum-version job: **passed** — workspace compile check and tests.
 
-This verifies the earlier Linux path resolver and private directory preparation on the GitHub-hosted Linux runner. The new create-only config initializer and its overwrite/permission smoke tests are added to the current branch but are awaiting a fresh CI result. It does not verify installation on a range of physical Linux distributions, arbitrary custom install roots, atomic config replacement, the future service daemon, data persistence, provider APIs or production readiness.
+This verifies the Linux path resolver, private directory preparation and create-only configuration initializer on the GitHub-hosted Linux runner. It does not verify installation on a range of physical Linux distributions, arbitrary custom install roots, atomic config replacement, the future service daemon, data persistence, provider APIs or production readiness.
 
 ## Not yet implemented
 

@@ -18,9 +18,10 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [x] Strict versioned TOML configuration and local CLI version/doctor/config validation.
 - [x] Linux XDG path-name resolution and read-only CLI paths command, with unit tests and CI smoke test.
 - [x] Explicit Linux directory preparation with owner-only permissions, parent validation, no-follow path walking and unit/CI smoke tests.
+- [x] Linux create-only starter configuration initialization with mode 0600, private parent directory, no-follow traversal and no-overwrite behavior (CI-verified).
+- [ ] Atomic configuration replacement, explicit backup/preservation and schema-migration behavior.
 - [ ] Embedded library is the primary artifact with stable public API.
 - [ ] CLI doctor validates actual filesystem ownership, permissions, symlink risk, disk space and host prerequisites.
-- [ ] Safe configuration creation, atomic replacement, explicit preservation and migration behavior.
 - [ ] Arbitrary custom installation-root override beyond XDG paths and named local instances.
 - [ ] Optional per-user service with owner-only local IPC.
 - [ ] CLI for install, status, logs, service lifecycle and self-test.
