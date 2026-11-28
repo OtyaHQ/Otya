@@ -39,14 +39,14 @@ pub enum StorageError {
 /// transaction handle borrows the store. A host can keep one store per worker
 /// or protect access using its own synchronization strategy. Implementations
 /// must commit atomically and roll back when a transaction is dropped.
-pub trait Storage: Send {
+pub trait Storage: Send + Sync {
     /// Concrete transaction type borrowed from this store.
     type Transaction<'store>: StorageTransaction
     where
         Self: 'store;
 
     /// Begin a write-capable transaction.
-    fn begin(&mut self) -> Result<Self::Transaction<'_>, StorageError>;
+    fn begin(&self) -> Result<Self::Transaction<'_>, StorageError>;
 
     /// Perform a bounded local health check without making network requests.
     fn health_check(&self) -> Result<(), StorageError>;
