@@ -178,10 +178,7 @@ pub struct ProviderProjectGrant {
 }
 
 impl ProviderProjectGrant {
-    pub fn validate(
-        &self,
-        binding: &ProviderResourceBinding,
-    ) -> Result<(), ProviderModelError> {
+    pub fn validate(&self, binding: &ProviderResourceBinding) -> Result<(), ProviderModelError> {
         validate_identifier("grant ID", &self.id)?;
         validate_identifier("project ID", &self.project_id)?;
         validate_identifier("connection ID", &self.connection_id)?;
@@ -226,10 +223,7 @@ fn validate_identifier(field: &'static str, value: &str) -> Result<(), ProviderM
 }
 
 fn validate_label(field: &'static str, value: &str) -> Result<(), ProviderModelError> {
-    if value.trim().is_empty()
-        || value.len() > 256
-        || value.chars().any(char::is_control)
-    {
+    if value.trim().is_empty() || value.len() > 256 || value.chars().any(char::is_control) {
         Err(ProviderModelError::InvalidLabel(field))
     } else {
         Ok(())
@@ -301,10 +295,7 @@ mod tests {
             environment: ProjectEnvironment::Staging,
             resource_type: "workers_script".to_owned(),
             resource_id: "opoint-api-staging".to_owned(),
-            available_capabilities: vec![
-                "deploy".to_owned(),
-                "read_logs".to_owned(),
-            ],
+            available_capabilities: vec!["deploy".to_owned(), "read_logs".to_owned()],
         }
     }
 
@@ -336,7 +327,9 @@ mod tests {
     #[test]
     fn rejects_duplicate_scopes() {
         let mut value = connection();
-        value.granted_scopes.push("workers_scripts_write".to_owned());
+        value
+            .granted_scopes
+            .push("workers_scripts_write".to_owned());
         assert_eq!(
             value.validate(),
             Err(ProviderModelError::DuplicateLabel("provider scope"))
