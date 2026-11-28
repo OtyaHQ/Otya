@@ -21,27 +21,27 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-The current engine and mobile portability foundations passed Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958) and Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), commit `148f837595e4e42d314fa8b59234fb5363111f01`. The runs verify the current Rust workspace, storage adapter/CLI smoke flow and portable-core Android/WebAssembly target builds. The older run 193 is historical evidence for the earlier Linux filesystem and SQLite foundation. The current branch contains:
-- Rust workspace with the Otya core and CLI crates;
-- strict versioned TOML configuration parsing and validation;
-- rejection of unknown configuration fields, including company, tenant and user identity fields;
-- local CLI commands for version, doctor, paths, configuration initialization and configuration validation;
-- Linux XDG path resolution for config, data, state, cache and optional runtime directories;
-- named local instance path separation and validation;
-- explicit private-directory preparation via safe rustix directory-descriptor operations;
-- core storage/transaction contract with bounded namespaced key/value operations and prefix scans;
-- Linux SQLite adapter implementing the core contract, initial v1-to-v2 schema migration, WAL and rollback-on-drop;
-- explicit `otya storage init` and non-creating `otya storage check` commands;
-- phone-first Codespaces devcontainer and remote developer workflow documentation;
-- mobile portability CI that compiles the portable core for Android arm64/armv7/x86_64 and WebAssembly;
-- no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
-- Linux create-only config initialization that writes `otya-engine.toml` with mode 0600 inside a verified directory; existing files and symlinks are never followed or overwritten;
-- tests for default paths, overrides, instance separation, unsafe instance names, directory create/idempotency, mode hardening, symlink rejection, unsafe parent rejection, private-file mode, existing-file refusal and invalid file names;
-- stable Rust formatting, Clippy, unit tests, CLI config-init/no-overwrite smoke checks, generated/example config validation and release build;
-- Rust 1.85 minimum-version compile and test pass.
-- An initial Linux-only SQLite adapter crate tested against the host system SQLite library, with private-file/no-follow checks, Otya application/schema metadata, exclusive metadata initialization, WAL, bounded busy timeout, explicit transactions, rollback, integrity checks, database reopen, read-only file hardening and foreign-database content-preservation tests. The full current branch run passed these checks (run 193).
+The current engine/storage implementation passed Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), and the portable core target builds passed Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), at code commit `148f837595e4e42d314fa8b59234fb5363111f01`. The engine CI verifies the Linux workspace, SQLite adapter and CLI storage smoke flow; the portability workflow verifies compilation of the portable core for Android and WebAssembly. Earlier run 193 remains historical evidence for the first filesystem/SQLite foundation, not the current storage integration.
 
-The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution/SQLite-version matrix or physical-host installation tests. The config initializer does not update existing files or replace configs atomically; the SQLite adapter currently creates only its initial metadata schema, not application business tables or a general migration system.
+The current branch contains:
+- Rust workspace with the Otya core, CLI and separate optional Linux SQLite adapter;
+- strict versioned TOML configuration parsing and validation;
+- rejection of unknown configuration fields, including company, tenant and end-user identity fields;
+- local CLI commands for version, doctor, paths, config initialization and validation, plus SQLite storage initialization and non-creating current-schema checks;
+- Linux XDG path resolution for config, data, state, cache and optional runtime directories;
+- validated named local instance path separation;
+- explicit private-directory preparation via Rustix directory-descriptor operations, no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
+- create-only Linux config initialization with mode 0600, existing-file refusal and no-follow parent checks;
+- backend-neutral core `Storage` and `StorageTransaction` contracts with bounded namespaced byte keys/values and prefix scans;
+- SQLite implementation of the core contract: namespaced get/put/delete/prefix scan, explicit commit and rollback-on-drop, WAL, busy timeout, health/integrity checks and schema v1-to-v2 migration;
+- `SqliteStore::open_existing` and `otya storage check` paths that do not create missing files or run migrations;
+- secure operator-owned database files with mode 0600, symlink refusal and database identity checks;
+- phone-first Codespaces devcontainer documentation and mobile portability CI;
+- portable core compile checks for Android arm64/armv7/x86_64 and WebAssembly; this is not an APK, FFI bridge or released mobile application.
+
+Otya Engine CI run 265 passed rustfmt, Clippy, workspace tests, local CLI diagnostics, config init/check smoke tests, SQLite init/check smoke tests, example config validation, release build and Rust 1.85 workspace compile/tests. The mobile portability run 21 passed target compilation. These results are CI evidence from GitHub-hosted runners, not physical-device or broad-distribution acceptance.
+
+The filesystem/config lifecycle and SQLite adapter remain experimental. Configuration does not yet have atomic replacement or crash-safe recovery. SQLite does not yet have general module-owned schemas, a complete migration runner, online backup/restore, multi-process stress, disk-full/power-loss fault-injection or a full Linux distribution/SQLite-version matrix.
 
 ## Gap register
 
@@ -54,7 +54,7 @@ The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux r
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
-| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions, initial v1-to-v2 migration and CLI smoke flow passed CI run 265 on Linux | Adapter conformance across backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
+| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions, v1-to-v2 migration and CLI init/check smoke flow are CI-verified on run 265 | Adapter conformance across multiple backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
@@ -112,7 +112,7 @@ The filesystem and SQLite tests verify the behavior on the GitHub-hosted Linux r
 - Data export/import and verified backup/restore.
 - PostgreSQL only as a later optional customer-managed adapter.
 
-**Acceptance:** generic adapter conformance, crash, concurrency, disk-full, backup and restore tests pass. The current SQLite metadata/transaction foundation does not yet satisfy this gate.
+**Acceptance:** generic adapter conformance, crash, concurrency, disk-full, backup and restore tests pass. The current SQLite key/value and transaction foundation is implemented and CI-tested, but does not yet satisfy the production acceptance gate.
 
 ### E4 — Optional local service and IPC
 
