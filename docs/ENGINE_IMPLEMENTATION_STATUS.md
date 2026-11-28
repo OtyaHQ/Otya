@@ -8,7 +8,7 @@
 - Rust workspace with core, CLI and separate optional Linux SQLite adapter crates.
 - Strict TOML configuration parser and semantic validation.
 - Configuration has no company, tenant, customer or end-user identity fields; unknown identity fields are rejected.
-- Local CLI commands: `otya version`, `otya doctor`, `otya paths`, `otya config init`, and `otya config validate`.
+- Local CLI commands: `otya version`, `otya doctor`, `otya paths`, `otya config init`, `otya config validate`, `otya storage init --config FILE`, and `otya storage check --config FILE`.
 - Linux XDG path discovery for per-operator config, data, state, cache and optional runtime directories.
 - Named local instances with validated names and separate config/data/state/cache/runtime path namespaces.
 - Explicit `otya paths --create` action to prepare the selected installation directories.
@@ -30,10 +30,12 @@
 
 ## CI evidence
 
-- Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), code commit `148f837595e4e42d314fa8b59234fb5363111f01`: **passed** — rustfmt, Clippy, all workspace tests, CLI diagnostics, SQLite init/check smoke tests, example configuration validation, release build and Rust 1.85 compile/tests.
+- Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), code commit `148f837595e4e42d314fa8b59234fb5363111f01`: **passed** — rustfmt, Clippy, all workspace tests, CLI diagnostics, SQLite `storage init`/`storage check` smoke tests, example configuration validation, release build and Rust 1.85 compile/tests.
 - Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), same code commit: **passed** — portable core compile checks for Android arm64, Android armv7, Android x86_64 and `wasm32-unknown-unknown`.
-- The subsequent branch commits update documentation; the tested code is unchanged from the code commit above.
-- The Codespaces devcontainer has been committed, but first-launch usability on a real phone browser has not yet been manually validated.
+- Subsequent commits update documentation; the tested Rust/storage implementation is unchanged from the code commit above.
+- The Codespaces devcontainer is committed, but first-launch usability on a real phone browser has not yet been manually validated.
+
+The CI results verify the tested Linux workspace and portable-core target compilation. They do not verify a broad physical Linux distribution/SQLite-version matrix, arbitrary custom install roots, atomic config replacement, general migrations, online backup/restore, crash recovery, an Android APK/FFI application, an iOS application, the future service daemon, provider APIs or production readiness.
 
 ## Not yet implemented
 
@@ -52,7 +54,7 @@
 - Business modules and host-application authorization integration.
 - Stable C ABI, Android/Kotlin/JNI, Flutter/Dart and Python bindings; no mobile packages are released yet.
 - Android platform storage/secrets/background-work adapter, Android NDK APK pipeline and iOS platform adapter.
-- Codespaces devcontainer first-launch validation and latest storage CI result.
+- Codespaces devcontainer first-launch validation on a real phone browser.
 - Cross-platform installers, signed release artifacts, SBOM and build provenance.
 
 ## Release status
