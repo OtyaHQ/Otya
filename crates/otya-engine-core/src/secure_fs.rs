@@ -261,10 +261,12 @@ pub fn create_private_file(
         return Err(SecureFsError::RunningAsRoot);
     }
 
-    let mut components = Path::new(file_name).components();
-    let is_one_normal_component =
-        matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none();
-    if !is_one_normal_component {
+    if file_name.is_empty()
+        || file_name == "."
+        || file_name == ".."
+        || file_name.contains('/')
+        || file_name.contains('\0')
+    {
         return Err(SecureFsError::InvalidFileName(file_name.to_owned()));
     }
 
