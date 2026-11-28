@@ -1,15 +1,11 @@
-use std::{
-    env,
-    ffi::OsString,
-    path::{Path, PathBuf},
-};
+use std::{env, path::PathBuf};
 
 use serde::Serialize;
 use thiserror::Error;
 
-/// Resolved paths for one locally operated Otya installation.
+/// Resolved directories for one locally operated Otya installation.
 ///
-/// This type only resolves names. It does not create directories, change
+/// This type only resolves path names. It does not create directories, change
 /// permissions, follow symlinks, or claim that a runtime directory is secure.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct EnginePaths {
@@ -36,7 +32,7 @@ pub enum PathResolutionError {
     UnsupportedPlatform,
 }
 
-/// Discover the XDG paths for the current Unix operator.
+/// Discover XDG paths for the current Unix operator.
 ///
 /// Relative XDG environment overrides are ignored, as required by the XDG
 /// Base Directory Specification. No filesystem changes are performed.
@@ -137,22 +133,14 @@ fn resolve_override(
         Some(_) => {
             diagnostics.push(PathDiagnostic {
                 code: "paths.invalid_xdg_override",
-                message: format!("{variable} is relative and was ignored; the XDG specification requires absolute paths."),
+                message: format!(
+                    "{variable} is relative and was ignored; the XDG specification requires absolute paths."
+                ),
             });
             fallback
         }
         None => fallback,
     }
-}
-
-#[allow(dead_code)]
-fn _is_absolute(path: &Path) -> bool {
-    path.is_absolute()
-}
-
-#[allow(dead_code)]
-fn _os_string_to_path(value: OsString) -> PathBuf {
-    PathBuf::from(value)
 }
 
 #[cfg(test)]
@@ -180,7 +168,10 @@ mod tests {
             paths.state_dir,
             PathBuf::from("/home/operator/.local/state/otya-engine")
         );
-        assert_eq!(paths.cache_dir, PathBuf::from("/home/operator/.cache/otya-engine"));
+        assert_eq!(
+            paths.cache_dir,
+            PathBuf::from("/home/operator/.cache/otya-engine")
+        );
         assert_eq!(
             paths.runtime_dir,
             Some(PathBuf::from("/run/user/1000/otya-engine"))
