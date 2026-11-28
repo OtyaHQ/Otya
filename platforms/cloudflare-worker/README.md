@@ -8,6 +8,7 @@ This project is a separate Cloudflare Worker wrapper around the portable Otya Ru
 
 - GET /health — non-sensitive Worker health response.
 - GET /version — adapter package version.
+- GET /capabilities — non-sensitive runtime and application API compatibility metadata, including implemented capabilities and explicit current limitations.
 - GET /api/v1/catalog/items — example application API, returning static demonstration records.
 - GET /api/v1/catalog/about — example application metadata.
 - Other `/api/*` paths are dispatched through the SDK registry and return standard 404/405 responses.
@@ -43,7 +44,7 @@ The manual deployment workflow is .github/workflows/cloudflare-worker-deploy.yml
 5. Choose preview to publish a separate otya-engine-edge-preview Worker, or production to publish otya-engine-edge.
 6. Production is allowed only from main. Configure the GitHub production Environment with required reviewers before using production deployments.
 
-The preview and production Worker names are separate. The current health/version endpoints disclose no credentials or private application data, but future protected endpoints and data bindings must be explicitly authenticated and isolated.
+The preview and production Worker names are separate. The health/version/capabilities endpoints disclose no credentials or private application data. The capabilities document is descriptive metadata, not an authorization grant. Future protected endpoints and data bindings must be explicitly authenticated and isolated.
 
 ## Application and security boundary
 
