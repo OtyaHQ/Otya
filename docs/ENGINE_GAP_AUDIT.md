@@ -1,0 +1,190 @@
+# Otya Engine Gap Audit
+
+**Audit date:** 2026-11-28  
+**Scope:** the engine-only branch and its current implementation. This document is not a claim that the planned features are complete.
+
+## Product invariant
+
+Otya is independently installed and operated by one operator per isolated installation. The operator may be an individual or an organization. The engine does not register the operator with Otya or join unrelated installations into a shared service. Each installation may keep its own local organization/workspace/project registry and private identity realm.
+
+One operator may run many projects and use an installation-owned identity provider, login portal, user/group directory and shared platform services across selected applications. Those users and signing keys exist only in that installation. Each application still owns its business permissions and resource authorization. This product rule does not mean an Otya-powered application can have only one user.
+
+A server installation may use a dedicated unprivileged OS service account. That is a local process/filesystem boundary chosen by the operator; it is not a shared multi-customer service. Multiple installations may communicate only when the operator explicitly configures such a connection.
+
+## Status definitions
+
+- **Implemented and CI-verified:** working code exists and the corresponding workflow passed at the stated revision.
+- **Implemented but not fully verified:** working code exists, but a required test or platform check is missing.
+- **Documented only:** architecture or requirements are written, but no working implementation exists.
+- **Not started:** no meaningful implementation exists.
+- **Blocked by a decision:** implementation should wait until the product contract is explicitly settled.
+
+## Current verified foundation
+
+The current engine/storage implementation passed Otya Engine CI [run 265](https://github.com/OtyaHQ/Otya/actions/runs/46143575958), and the portable core target builds passed Otya Mobile and Web Portability [run 21](https://github.com/OtyaHQ/Otya/actions/runs/46143575988), at code commit `148f837595e4e42d314fa8b59234fb5363111f01`. The engine CI verifies the Linux workspace, SQLite adapter and CLI storage smoke flow; the portability workflow verifies compilation of the portable core for Android and WebAssembly. Earlier run 193 remains historical evidence for the first filesystem/SQLite foundation, not the current storage integration.
+
+The current branch contains:
+- Rust workspace with the Otya core, CLI and separate optional Linux SQLite adapter;
+- strict versioned TOML configuration parsing and validation;
+- rejection of unknown configuration fields, including company, tenant and end-user identity fields;
+- local CLI commands for version, doctor, paths, config initialization and validation, plus SQLite storage initialization and non-creating current-schema checks;
+- Linux XDG path resolution for config, data, state, cache and optional runtime directories;
+- validated named local instance path separation;
+- explicit private-directory preparation via Rustix directory-descriptor operations, no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
+- create-only Linux config initialization with mode 0600, existing-file refusal and no-follow parent checks;
+- backend-neutral core `Storage` and `StorageTransaction` contracts with bounded namespaced byte keys/values and prefix scans;
+- SQLite implementation of the core contract: namespaced get/put/delete/prefix scan, explicit commit and rollback-on-drop, WAL, busy timeout, health/integrity checks and schema v1-to-v2 migration;
+- `SqliteStore::open_existing` and `otya storage check` paths that do not create missing files or run migrations;
+- secure operator-owned database files with mode 0600, symlink refusal and database identity checks;
+- phone-first Codespaces devcontainer documentation and mobile portability CI;
+- portable core compile checks for Android arm64/armv7/x86_64 and WebAssembly; this is not an APK, FFI bridge or released mobile application.
+
+Otya Engine CI run 265 passed rustfmt, Clippy, workspace tests, local CLI diagnostics, config init/check smoke tests, SQLite init/check smoke tests, example config validation, release build and Rust 1.85 workspace compile/tests. The mobile portability run 21 passed target compilation. These results are CI evidence from GitHub-hosted runners, not physical-device or broad-distribution acceptance.
+
+The filesystem/config lifecycle and SQLite adapter remain experimental. Configuration does not yet have atomic replacement or crash-safe recovery. SQLite does not yet have general module-owned schemas, a complete migration runner, online backup/restore, multi-process stress, disk-full/power-loss fault-injection or a full Linux distribution/SQLite-version matrix.
+
+## Gap register
+
+| Area | Current status | What is missing before production use |
+|---|---|---|
+| Independent installation boundary | Partially implemented; configuration, named local paths and filesystem isolation encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
+| No Otya control plane | Documented; current CLI has no remote calls | Automated network-egress tests proving local startup and embedded operation never phone home |
+| Linux directory discovery | XDG resolver and private directory preparation implemented and CI-verified | Physical distribution tests, arbitrary custom roots, free-space checks and broader install lifecycle |
+| Configuration lifecycle | Strict parsing and Linux create-only initialization are CI-verified; files are 0600 and existing files are never replaced | Atomic replacement, safe backup/restore, schema migration, and crash/power-loss recovery |
+| Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
+| Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
+| Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
+| Headless cloud runtime | Cloudflare Rust/WASM Worker serves a static sample website and routes the example API through the application SDK; CI compile passed; deployment not yet performed | Worker browser end-to-end tests, secure authentication integration, async storage/operation contract, D1/Queues/Workflows/Durable Objects adapters, Container/OCI profile, deployment and recovery acceptance |
+| Storage | Core storage contract, namespaced SQLite adapter, rollback-safe transactions, v1-to-v2 migration and CLI init/check smoke flow are CI-verified on run 265 | Adapter conformance across multiple backends, module-owned schemas, general migration runner, online backup/restore, crash/disk-full/multi-process stress tests and optional customer-managed PostgreSQL adapter |
+| Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
+| Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
+| Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
+| Security and authorization | Initial filesystem boundary is CI-verified; broader scope rules are documented | Threat model, capability enforcement, host-authorization context, authenticated IPC and authorization tests |
+| Provider adapters | Provider mapping documented | Generic HTTP/webhook foundation, sandbox fixtures, credentials, scopes, rate limits, retries, signatures and adapter conformance tests |
+| Application foundation | Initial SDK registry, manifest/route contract, auth/capability policy, request bounds, sample catalog API and sample website are implemented; CI verification pending | Real host auth integration, async request handlers/body, middleware/params, second host adapter, persistent state, API documentation/tooling and production lifecycle |\n| Business modules | Priority list only | Versioned domain contracts, migrations, permissions, audit events, business invariants and failure tests |
+| Module and extension system | Design documented | Registry, dependency/version resolution, signatures, safe disable/uninstall and isolated third-party process runtime |
+| Python SDK | Design documented | Versioned FFI contract, optional Python package, supported Python matrix and lifecycle/memory tests |
+| Flutter/Dart SDK | Design documented | C ABI, Dart FFI binding, native packaging and handle/lifetime/error tests |
+| Phone-first development | Codespaces devcontainer, phone-first guide, GitHub Actions CI and a manual Cloudflare deployment workflow are committed; current phone/browser experience still needs manual validation | Codespace first-launch validation on a real phone, workflow_dispatch test after merge, protected production approval and remote artifact retention |
+| Mobile runtime | Headless product boundary defined; Android/WASM target checks are compile-compatibility checks only; no Otya mobile app or APK is intended | Versioned HTTPS API/authentication, optional host-app SDK only if needed, and remote-client lifecycle/offline tests; standalone APK work is explicitly out of scope |
+| Cross-platform support | Linux-first strategy documented | Verified Linux distro/libc matrix first; Windows and macOS implementations only after platform abstraction tests |
+| Observability | Design documented | Structured logs, rotation, health/readiness, metrics, traces, correlation and redacted support bundle |
+| Performance | Release profile configured; no benchmark baseline | Startup, idle memory, binary size, throughput, latency, concurrency and soak benchmarks with named reference hardware |
+| Release engineering | Basic CI exists | Cargo.lock committed and enforced with --locked, multi-architecture builds, signed artifacts, SBOM, provenance, reproducible release process, release channels and rollback evidence |
+| Governance | Security and contribution guidance exists | Approved license, trademark policy, contributor terms, vulnerability reporting, support policy and release-key custody |
+
+## Additional target capabilities documented on 2026-11-28
+
+The complete platform target now includes:
+- private installation-owned identity provider and OIDC/OAuth issuer;
+- operator Console, Identity portal and UI toolkit/Studio;
+- bring-your-own-provider connection registry and credential vault;
+- Cloudflare, Firebase, Supabase and generic REST/webhook adapters;
+- explicit provider scopes, resource bindings, project grants and deploy approvals;
+- brand system and per-installation organization branding.
+
+These are **documented only** at this revision. They are not implemented production services. The current provider adapters and Cloudflare Worker remain experimental/preview. See [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md), [Bring-your-own-infrastructure provider architecture](BYI_PROVIDER_CONNECTIONS.md), and [Brand and product identity](BRAND_AND_PRODUCT_IDENTITY.md).
+
+## Decisions to preserve
+
+1. **Installation ownership:** the primary boundary is one operator-controlled installation. The OS user or service account is the Linux security principal. A company may be the operator, but it is not an engine tenant.
+2. **Embedded versus service:** the embedded Rust library is the primary product. The service is optional and needed only for background work or IPC among applications inside the same operator boundary.
+3. **Database ownership:** no Otya-hosted database. SQLite is the simplest local durable adapter; PostgreSQL is optional and operated by the customer/operator.
+4. **Business identity:** engine core never becomes a customer directory, Otya login system, tenant router or company registry. Host applications authorize their own users.
+5. **Extension trust:** trusted first-party modules may be compiled Rust crates. Third-party/untrusted modules must not be loaded as arbitrary native libraries into the core process.
+6. **Portability order:** Linux x86_64 and aarch64 first. A platform is supported only after build, install, update, service, storage and recovery tests pass.
+7. **Runtime support:** headless Rust core first; Linux native and Cloudflare Worker host adapters are separate. Python and Flutter/Dart are optional host-application SDKs only. No standalone Otya mobile app, Otya language/compiler or embedded Python runtime is part of this repository.
+
+## Recommended implementation order
+
+### E1 — Local platform discovery and operator diagnostics
+
+- Resolve per-operator config, data, state, cache and runtime paths.
+- Provide the read-only paths command and local diagnostics.
+- Check absolute path inputs and report invalid environment overrides.
+- Keep discovery read-only; directory creation belongs to an explicit installer command.
+- Add isolated tests without mutating global process environment variables.
+
+**Acceptance:** commands produce accurate local path diagnostics on Linux, do not make network calls and never create or modify files merely by inspecting paths.
+
+### E2 — Secure local filesystem and configuration lifecycle
+
+- Explicit install roots and override rules, including multiple isolated installs by one operator.
+- Secure directory creation with owner-only permissions.
+- Safe create-only file creation/opening that resists symlink substitution and path traversal (implemented and CI-verified).
+- Atomic config replacement, backups and schema migration.
+- Installer preview, confirmation and recovery.
+
+**Acceptance:** repeated install is safe; wrong-owner or unsafe paths fail closed; existing user data is not overwritten.
+
+### E3 — Storage and transaction foundation
+
+- Generic storage traits and conformance suite.
+- Complete SQLite adapter with module schema ownership, documented WAL semantics, Online Backup API and tested restore.
+- General migration runner, locks/state and interrupted-migration recovery.
+- Data export/import and verified backup/restore.
+- PostgreSQL only as a later optional customer-managed adapter.
+
+**Acceptance:** generic adapter conformance, crash, concurrency, disk-full, backup and restore tests pass. The current SQLite key/value and transaction foundation is implemented and CI-tested, but does not yet satisfy the production acceptance gate.
+
+### E4 — Optional local service and IPC
+
+- Service lifecycle under the operator's unprivileged account.
+- Owner-only Unix socket, protocol versioning and peer checks.
+- Graceful shutdown, startup recovery and bounded resources.
+- Status, logs and readiness diagnostics.
+
+**Acceptance:** service is optional, works without root, does not listen publicly and cannot cross the installation boundary.
+
+### E5 — Durable operations and reliability
+
+- Operation IDs, idempotency, request digests and durable state transitions.
+- Transactional outbox and webhook inbox.
+- Worker leases, scheduler, bounded retry and dead-letter workflows.
+- Unknown outcome and reconciliation model.
+
+**Acceptance:** fault injection proves no silent data loss or unsafe duplicate external effects.
+
+### E6 — Security, secrets and modules
+
+- Threat model, capability model and host-authorization context.
+- Secret references and operating-system secret integrations.
+- Signed module manifests and safe lifecycle.
+- Isolated extension protocol.
+
+**Acceptance:** authorization, key rotation, redaction, replay, resource-limit and module-isolation tests pass.
+
+### E7 — Provider adapters and business modules
+
+- Generic HTTP, webhook and SMTP contracts.
+- Optional Cloudflare, GitHub, Resend and Firebase adapters.
+- Adapter test fixtures and sandbox capability checks.
+- First-party business modules with clear domain ownership.
+
+**Acceptance:** adapters can be replaced/disabled without changing the core; operations expose provider uncertainty and audit outcomes.
+
+### E8 — SDKs and broad platform distribution
+
+- Stable C ABI.
+- Python and Flutter/Dart SDKs.
+- Linux packages and multi-architecture artifacts.
+- Windows/macOS only after platform-specific lifecycle proof.
+
+**Acceptance:** SDK lifecycle, version compatibility, packaging and platform tests pass.
+
+### E9 — Production release and governance
+
+- Signed artifacts, SBOM, build provenance and vulnerability response.
+- License, contributor and trademark policies.
+- Performance budgets, support window and deprecation policy.
+- Recovery runbooks and known-limitations matrix.
+
+**Acceptance:** every release has reproducible build/test evidence, signed packages and a tested recovery path.
+
+## Non-goals
+
+- No new kernel, Linux distribution or container runtime.
+- No Otya programming language, .ot source format, compiler or VM.
+- No Otya-hosted compute, mandatory account, central database or control plane.
+- No global or cross-installation company/customer/tenant/user directory. Each installation may own its local operator identity realm and user/group directory.
+- No claim of production readiness based on documents or a successful compile alone.

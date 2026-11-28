@@ -1,0 +1,20 @@
+name = "otya-engine-edge"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-11-28"
+# Production Engine is private. Product traffic enters through OEnd's
+# authenticated gateway and a Cloudflare Service Binding.
+workers_dev = false
+
+[build]
+command = "worker-build --release"
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/health", "/version"]

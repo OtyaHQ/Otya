@@ -1,0 +1,14 @@
+# Schema illustration only: the current branch does not ship a SQLite adapter
+# or transaction layer. Validation checks TOML shape, not backend availability.
+# For the safe embedded starter, use: otya config init
+
+schema_version = 1
+
+[engine]
+mode = "embedded"
+
+[storage]
+backend = "sqlite"
+# Replace with an absolute path in the installing operator's XDG_DATA_HOME.
+path = "/home/your-user/.local/share/otya-engine/engine.db"
+busy_timeout_ms = 5000

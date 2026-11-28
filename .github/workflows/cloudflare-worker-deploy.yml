@@ -1,0 +1,99 @@
+name: Deploy Otya Cloudflare Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy the isolated preview Worker or private production Worker."
+        type: choice
+        required: true
+        default: preview
+        options:
+          - preview
+          - production
+      confirm:
+        description: "For production only, type DEPLOY-OTYA-ENGINE-PRODUCTION."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otya-cloudflare-worker-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy headless Worker
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    defaults:
+      run:
+        working-directory: platforms/cloudflare-worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DEPLOYMENT_TARGET: ${{ inputs.target }}
+      CONFIRM: ${{ inputs.confirm }}
+      RUSTUP_TOOLCHAIN: 1.91.0
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js for Wrangler
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Rust and WebAssembly target
+        run: |
+          rustup toolchain install 1.91.0 --profile minimal
+          rustup default 1.91.0
+          rustup target add wasm32-unknown-unknown
+
+      - name: Require explicit production confirmation
+        if: inputs.target == 'production'
+        run: |
+          if [ "$CONFIRM" != "DEPLOY-OTYA-ENGINE-PRODUCTION" ]; then
+            echo "Production requires the exact confirmation DEPLOY-OTYA-ENGINE-PRODUCTION." >&2
+            exit 1
+          fi
+
+      - name: Restrict production deployments to main
+        if: inputs.target == 'production'
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Production deployments can only run from main." >&2
+            exit 1
+          fi
+
+      - name: Require operator-owned Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo "Missing GitHub Actions secret CLOUDFLARE_ACCOUNT_ID." >&2
+            exit 1
+          }
+          test -n "$CLOUDFLARE_API_TOKEN" || {
+            echo "Missing GitHub Actions secret CLOUDFLARE_API_TOKEN." >&2
+            exit 1
+          }
+
+      - name: Install pinned workers-rs build tool
+        run: cargo +1.91.0 install worker-build --version 0.8.7
+
+      - name: Select isolated Worker configuration
+        run: |
+          case "$DEPLOYMENT_TARGET" in
+            preview) echo "WRANGLER_CONFIG=wrangler.preview.toml" >> "$GITHUB_ENV" ;;
+            production) echo "WRANGLER_CONFIG=wrangler.toml" >> "$GITHUB_ENV" ;;
+            *) echo "Unsupported deployment target." >&2; exit 1 ;;
+          esac
+
+      - name: Build and validate Worker bundle
+        run: |
+          worker-build --release
+          npx --yes wrangler@4.169.0 deploy --dry-run --config "$WRANGLER_CONFIG"
+
+      - name: Deploy selected Worker
+        run: npx --yes wrangler@4.169.0 deploy --config "$WRANGLER_CONFIG"

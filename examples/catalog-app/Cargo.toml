@@ -1,0 +1,12 @@
+[package]
+name = "otya-example-catalog-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Example headless catalog application built on the Otya Engine SDK"
+
+[dependencies]
+otya-engine-sdk = { path = "../../crates/otya-engine-sdk" }
+serde.workspace = true
+serde_json.workspace = true

@@ -1,46 +1,49 @@
-# Decision 0001: Linux-First Platform Foundation
+# Decision 0001: Independently Installable Engine Foundation
 
-- Status: accepted for the experimental prototype
-- Scope: initial Otya Engine and Otya OS architecture
-- Revisit when: measured technical requirements show that the current foundation blocks a necessary capability
+- Status: accepted for the engine-only project direction
+- Scope: Otya Engine repository
+- Revisit when: measured compatibility, security or operational needs require a change
 
 ## Context
 
-Otya aims to combine an installable systems engine, its own programming language, a portable runtime, developer tooling and a complete operating environment.
+The initial repository proposal combined an installable engine, a programming language, a compiler, a portable runtime and a complete operating environment. Building all of these together created unnecessary dependencies and made the product boundary unclear.
 
-Building a new general-purpose kernel, driver ecosystem, language, compiler, runtime, package system and user experience at the same time would create a large number of unproven dependencies before users can test a useful result.
-
-The project needs a usable foundation that can be developed and tested incrementally.
+The current product objective is a reusable engine kit that a customer installs into and operates within their own environment. The design should follow the useful packaging lesson of Omy Play's embedded Media Kit dependency: a shared API and core implementation with optional platform-specific components, without requiring a vendor-hosted service for local functionality.
 
 ## Decision
 
-1. Use the Linux kernel as the initial Otya OS kernel foundation.
-2. Build Otya Engine as a distinct, installable platform layer above Linux.
-3. Make the engine usable on supported existing Linux distributions before producing a complete Otya OS image.
-4. Develop .ot as Otya's own source language.
-5. Bootstrap the first compiler and engine components in Rust.
-6. Target WebAssembly initially, with runtime interfaces designed around WASI and the Component Model.
-7. Evaluate a custom kernel only after the Otya platform has measurable requirements that Linux cannot satisfy adequately.
+1. This repository develops Otya Engine only.
+2. The engine is implemented in Rust.
+3. The primary integration is an embeddable Rust library.
+4. An optional local service and operator CLI provide shared background operations and lifecycle management.
+5. The customer supplies and owns the host environment, data, storage, credentials, provider accounts, backups and operation.
+6. No Otya-hosted compute, mandatory central database or Otya cloud account is required.
+7. Storage, identity, messaging, provider, filesystem and network integrations are explicit, replaceable adapters.
+8. Cloudflare, GitHub, Resend and Firebase are optional provider integrations, not engine runtime dependencies.
+9. The project does not develop an Otya language, compiler or language runtime.
+10. Linux is the first supported service-installation target. The engine must also be embeddable by supported host applications.
+11. OEnd and the existing Otya ecosystem remain separate. Engine integration into those products is optional and must respect their current boundaries.
 
 ## Consequences
 
 Benefits:
-- Earlier access to real hardware and a mature driver ecosystem.
-- Engine installation can be tested without replacing a user's operating system.
-- Language, runtime, package and system API work can proceed in small increments.
-- The OS image becomes a composition of tested components rather than one inseparable prototype.
+- A narrower product that can be built, tested and installed incrementally.
+- No need to operate a vendor cloud to make local functionality work.
+- One reusable Rust core across embedded and service modes.
+- Provider changes do not require rewriting business modules.
+- Customer data and infrastructure stay under customer control.
 
-Costs and constraints:
-- The first Otya OS is Linux-based and must comply with the licenses of its included components.
-- Some low-level behavior remains defined by Linux and the host distribution.
-- Otya-specific hardware and security interfaces must be designed above the kernel.
-- The Wasm runtime and component interfaces add dependencies that require version and security management.
+Constraints:
+- Customers must provide and operate their infrastructure and configured storage.
+- Self-hosting transfers operational work to the customer; it does not make operations automatic.
+- The engine must provide excellent diagnostics, upgrade, backup and recovery tools.
+- Native Rust extensions require trusted builds; untrusted extensions need an isolated process or sandbox boundary.
+- No production or security claim is valid without implementation, test and review evidence.
 
 ## Revisit criteria
 
-Reconsider the kernel foundation only with a written proposal that provides:
-- A capability Linux cannot provide adequately for Otya's defined goals.
-- A realistic driver, hardware and compatibility strategy.
-- A threat model and maintenance plan.
-- Measured evidence that the proposed alternative improves the required outcome.
-- A migration plan that does not strand existing applications or users.
+Reconsider the decision only with evidence showing:
+- a customer requirement that cannot be met by the current embedded/service model;
+- a documented threat model and operational cost;
+- compatibility and migration impact;
+- a testable implementation and rollback strategy.

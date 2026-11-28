@@ -1,0 +1,113 @@
+name: Otya Engine CI
+
+on:
+  push:
+    branches:
+      - main
+      - "engine-only/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otya-engine-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Rust quality and tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install system SQLite development library
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libsqlite3-dev pkg-config
+
+      - name: Install stable Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test workspace
+        run: cargo test --workspace --all-targets
+
+      - name: CLI local diagnostics smoke tests
+        run: |
+          cargo run -p otya-engine-cli -- doctor --json
+          cargo run -p otya-engine-cli -- paths --json
+          cargo run -p otya-engine-cli -- paths --instance ci-isolated --create --json
+          cargo run -p otya-engine-cli -- config init --instance ci-config-init --json
+          CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/otya-engine/instances/ci-config-init/otya-engine.toml"
+          test -f "$CONFIG_FILE"
+          test "$(stat -c '%a' "$CONFIG_FILE")" = "600"
+          cargo run -p otya-engine-cli -- config validate --file "$CONFIG_FILE"
+          BEFORE_HASH="$(sha256sum "$CONFIG_FILE" | cut -d ' ' -f 1)"
+          if cargo run -p otya-engine-cli -- config init --instance ci-config-init; then
+            echo "config init unexpectedly overwrote an existing file" >&2
+            exit 1
+          fi
+          AFTER_HASH="$(sha256sum "$CONFIG_FILE" | cut -d ' ' -f 1)"
+          test "$BEFORE_HASH" = "$AFTER_HASH"
+
+      - name: Exercise optional SQLite storage adapter
+        run: |
+          STORAGE_DIR="${RUNNER_TEMP}/otya-storage-smoke"
+          mkdir -p "$STORAGE_DIR"
+          chmod 700 "$STORAGE_DIR"
+          STORAGE_CONFIG="${RUNNER_TEMP}/otya-storage-smoke.toml"
+          STORAGE_DB_PATH="$STORAGE_DIR/engine.db"
+          cat > "$STORAGE_CONFIG" <<EOF
+          schema_version = 1
+          [engine]
+          mode = "embedded"
+          [storage]
+          backend = "sqlite"
+          path = "$STORAGE_DB_PATH"
+          busy_timeout_ms = 5000
+          EOF
+          chmod 600 "$STORAGE_CONFIG"
+          cargo run -p otya-engine-cli -- storage init --config "$STORAGE_CONFIG" --json
+          cargo run -p otya-engine-cli -- storage check --config "$STORAGE_CONFIG" --json
+          test -f "$STORAGE_DB_PATH"
+          test "$(stat -c '%a' "$STORAGE_DB_PATH")" = "600"
+
+      - name: Validate example configuration
+        run: cargo run -p otya-engine-cli -- config validate --file examples/otya-engine.toml
+
+      - name: Build release binaries
+        run: cargo build --workspace --release
+
+  minimum-supported-rust:
+    name: Minimum Rust version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install system SQLite development library
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libsqlite3-dev pkg-config
+
+      - name: Install MSRV Rust
+        run: |
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup default 1.85.0
+
+      - name: Compile and test on MSRV
+        run: |
+          cargo check --workspace
+          cargo test --workspace --all-targets

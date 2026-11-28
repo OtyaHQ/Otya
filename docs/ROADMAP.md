@@ -1,126 +1,308 @@
-# Otya Platform Roadmap
+# Otya Engine Roadmap
 
-This roadmap is milestone-based, not date-based. A milestone is complete only when its acceptance evidence exists.
+This is an engine-only, evidence-based roadmap. Milestones are complete only when implementation and acceptance evidence exist. The repository does not include a programming language, compiler, language runtime or operating-system distribution.
 
-## Phase 0 — Foundation and decisions
+## E0 — Product and architecture boundary
 
-**Goal:** agree on the boundaries before implementation expands.
-
-Deliverables:
-- Platform architecture.
-- Otya Language 0.1 draft.
-- Linux-first kernel decision.
-- Rust bootstrap and self-hosting plan.
-- Initial security model.
-- Repository licensing and contribution decision.
-
-Exit gate:
-- Architecture reviewed.
-- Language proposal reviewed.
-- Licensing and contribution policy approved before external code is accepted.
-
-## Phase 1 — Minimal bootstrap toolchain
-
-**Goal:** execute a tiny, well-defined Otya program on a development host.
+**Goal:** define exactly what is installed and who operates it.
 
 Deliverables:
-- Rust workspace and CLI.
-- .ot lexer and parser.
-- Type checking for the supported language subset.
-- Source diagnostics.
-- First compiler target.
-- Unit, parser and negative tests.
+- Engine-only product definition and Otya/OEnd boundary.
+- One installation, one operator boundary, many workspaces/projects/components; a local operator-controlled control plane manages that operator's estate.
+- No global Otya-hosted control plane, cross-operator registry, shared customer pool or mandatory vendor heartbeat.
+- Explicit distinction between operator/workspace/project/component/environment scope and application end-user identity.
+- Complete self-hosted platform distribution: local operator console, installation-owned identity issuer, authorization, UI kit and shared service catalogue.
+- Per-installation identity realm and user directory; no cross-installation shared Otya identity or customer registry.
+- Non-developer administration through a browser UI backed by the same versioned management API and reviewable configuration as the CLI.
+- Embedded-library, optional local-service and CLI model.
+- Customer-operated responsibility and data ownership model.
+- Module, storage and provider adapter contracts.
+- Engineering influence register and platform portability strategy.
+- Threat model and dependency policy.
 
-Exit gate:
-- Documented example compiles and runs in a clean CI environment.
-- Invalid programs fail with useful diagnostics.
-- Supported target and host versions are explicit.
+Exit gate: architecture reviewed; no mandatory Otya cloud dependency; no hidden network calls; supported initial platform documented.
 
-## Phase 2 — Runtime and standard library
+## E0.5 — Multi-project operator model
 
-**Goal:** run portable Otya modules with enforced permissions.
-
-Deliverables:
-- Runtime host using the selected Wasm engine.
-- Versioned host interfaces.
-- Capability grants and resource limits.
-- Initial standard-library modules.
-- Test and debugging support.
-
-Exit gate:
-- Denied capabilities are actually denied.
-- Resource limits are verified.
-- Runtime compatibility and failure behavior are tested.
-- No unsupported security guarantee is claimed.
-
-## Phase 3 — Engine services and package lifecycle
-
-**Goal:** make Otya Engine useful on an existing supported Linux distribution.
+**Goal:** allow one installation to manage a coherent estate without merging applications or sharing data by accident.
 
 Deliverables:
-- Engine service manager and health reporting.
-- Package manifest and dependency resolution.
-- Package integrity and signature model.
-- Install, update, rollback and removal flows.
-- otya doctor and recovery diagnostics.
+- Versioned workspace, project, component and environment model.
+- Local project inventory spanning multiple repositories and deployable units.
+- Project-scoped configuration, secrets references, access grants and release records.
+- Shared-service contract and default-deny grant model.
+- Read-only inventory and dry-run planning before deployment mutation.
+- Separation of operator control plane from independently running workload plane.
+- Failure isolation: one project's update, outage or rollback must not mutate another project.
 
-Exit gate:
-- Fresh install, upgrade, rollback and uninstall pass in isolated test hosts.
-- User data is preserved as documented.
-- Interrupted installs recover safely.
-- Packages cannot exceed their granted permissions.
+Exit gate: one disposable installation can inventory multiple independent sample projects and components, prove explicit service grants, and demonstrate that revoking a grant or rolling back one project does not affect another.
 
-## Phase 4 — Otya OS composition
+## E0.75 — Full platform distribution and operator experience
 
-**Goal:** assemble a bootable Otya operating environment.
+**Goal:** define the installable product as a complete private platform, not only an embedded library.
 
 Deliverables:
-- Supported Linux kernel and boot configuration.
-- Otya Engine and required system services.
-- Base user experience and system settings.
-- Installer/image builder.
-- Hardware compatibility matrix.
-- Update, recovery and accessibility experience.
+- Local control plane, supervisor and authenticated management API.
+- Browser operator console and first-run setup wizard.
+- Installation-owned identity service, login portal and user/group directory.
+- Authentication and authorization as separate contracts.
+- Reusable UI kit, design tokens and application templates.
+- Optional shared service modules with per-project grants.
+- Non-developer workflows for members, roles, services, health and deployments.
 
-Exit gate:
-- Clean installation and upgrade on declared hardware.
-- Boot, storage, networking, suspend/resume and peripheral tests.
-- Recovery from a failed update.
-- Published release notes and support policy.
+Exit gate: a fresh isolated installation can be configured and administered locally; no account at Otya is needed; a second installation has separate users, signing keys, data and modules.
 
-## Phase 5 — Self-hosting and ecosystem
+## E0.8 — AI application creation and provider provisioning
 
-**Goal:** reduce bootstrap dependence and open a safe contribution model.
+**Goal:** let a developer or non-developer describe an application, compose reusable Otya capabilities, connect infrastructure they own and safely provision/deploy the result.
 
 Deliverables:
-- Otya compiler implementation in .ot.
-- Repeatable self-hosting pipeline.
-- Stable public SDK and extension interfaces.
-- Contributor governance and review rotation.
-- Public package and documentation infrastructure.
+- Guided AI requirements gathering and a versioned, provider-neutral application blueprint.
+- Cloudflare-first provider connection using the official OAuth/MCP server, with an Otya-owned MCP client, least-privilege grants and tool audit.
+- Provider-neutral capability catalogue and adapters for Cloudflare, GitHub, Firebase, Supabase, email, payments, AI and custom APIs.
+- Declarative resource graph, dry-run plan, permission/cost/limit review, explicit approvals and idempotent provisioning.
+- Generated editable source, schemas/migrations, UI, API contracts, tests, manifests and documentation.
+- Preview deployment, acceptance verification, explicit production promotion and exportable project artifacts.
+- Guided non-developer mode and developer mode operating on the same project/source/runtime.
+- Extraction plan for generic modules from OEnd, OID, OPoint, Omy, O and OWeb without importing private data or making OEnd mandatory for unrelated apps.
 
-Exit gate:
-- Reproducible bootstrap evidence.
-- Security response and release process operational.
-- Compatibility policy published.
-- External contributions pass the same review and CI requirements as maintainer code.
+Exit gate: from a fresh isolated operator installation, a user connects a disposable provider account, describes a sample application, reviews and approves its blueprint/resource plan, deploys a working preview, verifies it, exports the source and can continue operating the app without Otya-hosted services.
 
-## Always-on quality requirements
+## E1 — Rust workspace, build and operator CLI
 
-Every phase must preserve:
+**Goal:** build and run the smallest useful engine locally for one installing operator.
 
-- Backward compatibility or a documented migration path.
-- Automated tests and clean-build evidence.
-- Security review for permissions and native code.
-- Dependency and artifact provenance.
-- Performance measurement on declared reference hardware.
-- Installation and recovery documentation.
-- Clear distinction between implemented, tested and deployed features.
+Deliverables:
+- Rust workspace with pinned stable toolchain and declared MSRV.
+- CI for formatting, Clippy, unit tests, integration tests and dependency checks.
+- Linux XDG path resolution for per-operator config, data, state, cache and optional runtime paths.
+- Read-only CLI paths command with human-readable and JSON output.
+- Strict configuration with schema versions and no engine-level company, tenant or end-user identity fields.
+- CLI for version, doctor, paths and config validation; status, logs and self-test remain future work.
+- Linux x86_64 and aarch64 build targets.
+- OS-neutral core contracts and isolated platform-specific code.
+- Phone-first developer environment using a repository Codespaces devcontainer and remote GitHub Actions.
+- Initial Android and WebAssembly compile-compatibility checks for the portable core; no APK or Worker runtime is implied.
 
-## Explicit non-goals for the first release
+Exit gate: clean reproducible build in CI; CLI works on clean Linux test hosts; no secrets emitted in logs; all reported support targets are actually tested.
 
-- Writing a replacement kernel before the engine has proven its value.
-- Replacing the Otya ecosystem's existing backend, identity or product databases.
-- Giving ordinary apps unrestricted root or host access.
-- Claiming every third-party API or service will work automatically.
-- Publishing a production or security certification without evidence.
+## E2 — Secure filesystem and installation lifecycle
+
+**Goal:** install, operate and remove the engine without a hosted Otya service.
+
+Deliverables:
+- Explicit installation roots and safe overrides, including multiple isolated installations under one OS user.
+- Secure directory creation, ownership/mode checks and symlink-safe filesystem operations.
+- Signed release artifacts and checksums.
+- Install package with host preflight checks.
+- Per-user service profile; later optional dedicated unprivileged server-service profile.
+- systemd unit with tested hardening and configurable resource limits.
+- Start, stop, restart, status, doctor, logs and uninstall.
+- Embedded-library packaging separate from service installation.
+- Interrupted-install recovery, upgrade, rollback and uninstall.
+
+Exit gate: fresh install, interrupted-install recovery, upgrade, rollback and uninstall tested in disposable VMs; customer data preserved as documented.
+
+## E3 — Storage and transactions
+
+**Goal:** reliable operator-controlled persistence.
+
+Deliverables:
+- Storage and transaction traits with conformance tests.
+- Optional SQLite adapter with safe WAL/backup behavior.
+- Optional operator-managed PostgreSQL adapter.
+- Versioned migrations and migration preflight.
+- Idempotency store and transactional outbox/inbox.
+- Data export and import.
+
+Exit gate: crash and concurrency tests pass; backup and restore verified; financial/audit modules reject ephemeral storage.
+
+## E4 — Runtime operations and reliability
+
+**Goal:** survive ordinary process, machine and provider failures.
+
+Deliverables:
+- Job leases and worker supervision.
+- Bounded retries, backoff, circuit breakers and dead-letter handling.
+- Unknown-outcome tracking and reconciliation interfaces.
+- Graceful shutdown and restart recovery.
+- Local health/readiness probes.
+- Redacted logs, metrics and trace correlation.
+- Backup schedule hooks, integrity checks and restore drills.
+
+Exit gate: failure-injection tests prove no silent data loss, duplicate unsafe side effects or unbounded retry loops.
+
+## E5 — Security and access control
+
+**Goal:** protect the operator's private installation, identity realm, projects and service boundaries without creating a shared Otya-hosted identity SaaS.
+
+Deliverables:
+- OS-principal-aware local operator boundary and authenticated local IPC where required.
+- Module capability grants, least privilege and default-deny operation checks.
+- A per-installation identity provider and authentication contract; host applications remain responsible for product-specific resource authorization.
+- Secure local user/group directory, invitation and account-recovery model.
+- OIDC/OAuth 2.0 issuer, client registration, audiences, scopes, JWKS and signing-key rotation.
+- Passkeys/WebAuthn, TOTP MFA, session lifecycle and revocation.
+- Machine identities and service-to-service authentication.
+- Optional external OIDC/SAML federation, never required for local operation.
+- Installation/workspace/project/component-scoped role and capability policies.
+- Secret-provider interface and credential redaction.
+- Signed webhook verification and replay protection.
+- Key rotation hooks and encrypted backup support.
+- Dependency audit, SBOM, signing and vulnerability process.
+
+Exit gate: threat model reviewed; independent installations have disjoint identities and signing keys; authentication, account recovery, MFA, session revocation and key rotation tests pass; app-specific permissions cannot be bypassed by successful sign-in; privileged code receives security review.
+
+## E5.5 — Installation-owned identity and access platform
+
+**Goal:** give each operator a complete private login and identity service, with no shared Otya user directory.
+
+Deliverables:
+- Local identity realm, user/group directory, branded login and recovery portal.
+- OIDC/OAuth 2.0 provider endpoints and client registration for selected applications.
+- Password, passkey/WebAuthn and TOTP MFA flows using reviewed libraries.
+- Secure sessions, device/session management, revocation, key rotation and JWKS.
+- Installation/workspace/project roles and audited capability grants.
+- Workload identity and machine-to-machine credentials.
+- Optional external OIDC/SAML federation.
+- Explicit separation of authentication from application-owned authorization.
+
+Exit gate: two clean installations have disjoint user stores, issuer identifiers, signing keys and sessions; applications reject wrong issuer/audience/scope; recovery, MFA and revocation have independent security review.
+
+## E6.5 — Brand system and user experience foundation
+
+**Goal:** make Otya recognisable and understandable to developers, operators and non-developers.
+
+Deliverables:
+- Approved Otya master mark and wordmark, icon, monochrome, reversed and favicon variants.
+- Design tokens, accessible light/dark themes, typography and icon rules.
+- Console, Identity, Connect and Studio naming and navigation patterns.
+- Installation-level organization branding with safe Otya/provider attribution.
+- Brand voice, UI copy, accessibility, localization and contribution rules.
+
+Exit gate: brand artwork and tokens pass design/trademark review; UI components pass accessibility and responsive tests; external providers are visibly attributed and billing ownership is clear.
+
+## E6 — Provider adapter framework
+
+**Goal:** make provider connections reusable, replaceable and testable.
+
+Deliverables:
+- Shared HTTP client policy, timeout, retry and rate-limit behavior.
+- Adapter manifest and capability declarations.
+- Sandbox/test-mode contract and deterministic test fixtures.
+- Cloudflare, GitHub, Resend and Firebase adapters as separate optional packages.
+- Generic SMTP, REST, webhook and S3-compatible interfaces.
+- Provider health, reconciliation and operator diagnostics.
+- Otya Connect registry and browser wizard for OAuth, scoped API tokens, mTLS and custom REST/OpenAPI connections.
+- Local credential vault abstraction with OS secret store, operator-managed vault/KMS and encrypted local fallback.
+- Separate provider connection, resource binding, project grant and webhook endpoint concepts.
+- Cloudflare account inventory/deploy/secrets/bindings adapter; Firebase project adapter; Supabase project/API/RLS diagnostics adapter.
+- Provider-native runtime secret injection, with provider management credentials kept in the operator vault.
+- Read-only connection verification, sandbox tests, explicit dry-run plans and approval for mutation/deployment/billing actions.
+- Connection health, scope validation, expiry, rotation, quota, provider status and operator-owned billing visibility.
+
+Exit gate: each adapter passes conformance tests and can be disabled or replaced without changing engine core.
+
+## E7 — Application SDK and first applications
+
+**Goal:** let independent developers build websites, APIs and other applications on top of Otya without turning the engine into a monolith.
+
+Deliverables:
+- Versioned application manifest, stable app ID and engine API compatibility declaration.
+- Application registry, exact route contracts, request/response limits and duplicate route detection.
+- Public/authenticated access policy and host-verified capability context.
+- Language-neutral, versioned HTTPS/JSON runtime and management APIs with OpenAPI specifications.
+- Headless HTTP host adapters and frontend-to-API integration pattern.
+- Rust embedded SDK plus language-neutral API contracts and generated TypeScript/Python/Go/Java/.NET/PHP/Ruby client SDKs where demand justifies maintenance.
+- Example catalog API and responsive website proving the application boundary.
+- App contract tests, starter template and eventually a project scaffolder.
+- A separately maintained sample application that builds using only released SDK artifacts, without depending on a private monorepo path.
+- A documented external-operator quickstart and an Engine/product capability matrix that distinguishes shipped from planned features.
+- Async handlers, middleware, path parameters, request schema validation and API specification generation after the initial contract is reviewed.
+
+Exit gate: the same app contract is tested through at least two distinct host adapters; authentication is verified by the host, capabilities are not caller-spoofable, and storage/operations are durable where the app requires them.
+
+## E7.5 — Operator console, UI kit and guided application building
+
+**Goal:** make common platform administration and application setup accessible to non-developers without hiding source, policy or operational consequences.
+
+Deliverables:
+- Responsive browser-based console backed by the same authenticated management API as the CLI.
+- First-run setup, owner bootstrap, member invitations, access reviews and guided service configuration.
+- Reusable accessible design system, theming, localization, navigation, form, table, dialog and dashboard components.
+- First-party sign-in/account components connected to the installation identity service.
+- Business portal, internal tool, media and generic app starter templates.
+- Schema-driven forms and workflow/approval builders for bounded use cases.
+- Exportable and reviewable configuration; visual edits must produce versioned plans/diffs.
+- Clear operator, project-admin, developer, support and end-user experiences.
+
+Exit gate: non-developers can complete common member, policy, service, health and deployment tasks without the CLI; generated UI still enforces server-side authorization; all changes are auditable and exportable.
+
+## E8 — First business modules
+
+**Goal:** prove that reusable infrastructure supports real domain workflows.
+
+Prioritized modules:
+- identity integration contracts and reusable identity-aware modules; the installation-owned identity provider is specified in E5.5;
+- communications and notifications;
+- organization, staff, roles and approvals;
+- accounting ledger and audit;
+- retail, inventory and order workflows;
+- provider-neutral payment orchestration and reconciliation;
+- lending and workforce modules only after domain and legal review.
+
+Exit gate: each module has typed domain models, migrations, host-authorized operations, audit events, tests and documented limitations. Do not claim regulated service authorization merely because a module exists.
+
+## E9 — SDKs and host-application integrations
+
+**Goal:** let other applications embed or call the headless engine without turning Otya itself into a mobile or desktop app.
+
+Deliverables:
+- Stable Rust SDK and versioned C ABI with opaque handles, ownership, thread and error contracts.
+- Optional C ABI, Kotlin/JNI or Flutter/Dart bindings only for host applications that need in-process embedding.
+- A versioned HTTPS API/client contract so host websites and mobile apps can call the operator's headless Otya runtime.
+- Python bindings distributed as a separate optional package.
+- Optional local IPC client library for supported desktop/server hosts.
+- Cross-target compile checks as compatibility evidence, not as proof of a complete app.
+- Version compatibility matrix and integration examples.
+- No dependency on Otya-hosted compute or control plane; third-party apps use their own operator's Engine installation and provider accounts.
+
+No standalone Otya Android/iOS app, APK or app-store product is planned in this repository. The complete installation may provide a browser-based operator console and UI toolkit, but the Rust core remains headless and hostable. Android target checks do not imply an APK delivery pipeline.
+
+**Exit gate:** host SDK lifecycle, compatibility, ownership and authorization tests pass; HTTP API authentication and versioning are stable; optional bindings do not introduce mandatory mobile UI or platform dependencies.
+ 
+## E10 — Extension system and mature distribution
+
+**Goal:** support independent modules without weakening the core.
+
+Deliverables:
+- Versioned extension manifests, signatures and dependency constraints.
+- First-party modules as Rust crates.
+- Isolated subprocess extension protocol.
+- Evaluate WASI Component Model sandboxing as an optional extension ABI.
+- Standard package formats only after signing, rollback and dependency-conflict behavior are proven.
+- Release channels, support windows, migration guarantees and deprecation policy.
+- Committed Cargo.lock and CI builds in locked dependency mode.
+
+Exit gate: untrusted extensions cannot access undeclared host resources; incompatible upgrades fail closed; recovery and uninstall are tested; dependency versions are reproducible.
+
+## Always-on release requirements
+
+Every milestone preserves:
+- backward compatibility or a documented migration;
+- clean CI builds and tests;
+- install, update, rollback and removal evidence;
+- data export, backup and restore;
+- signed artifacts, checksums, SBOM and dependency review;
+- explicit permissions and a documented threat model;
+- privacy-first observability;
+- an accurate feature/support matrix.
+
+## Non-goals
+
+- No Otya programming language or compiler in this repository.
+- No mandatory Otya-hosted compute, database, storage, email, identity, payment or control plane. The full installation provides software and adapters; operators bring and pay for their own hosting/services.
+- No replacement kernel or complete OS distribution in the initial engine project.
+- No global or cross-installation company, customer, tenant or end-user registry. Each independent installation may own its local identity realm and user directory.
+- No assumption that a provider adapter makes an external API available, legal or reliable.
+- No multi-operator shared-hosting, clustering or high-availability guarantee before separately designed and tested.

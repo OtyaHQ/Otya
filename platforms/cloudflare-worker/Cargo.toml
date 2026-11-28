@@ -1,0 +1,27 @@
+[package]
+name = "otya-engine-cloudflare-worker"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+publish = false
+description = "Headless Cloudflare Workers host adapter for Otya Engine"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+otya-engine-core = { path = "../../crates/otya-engine-core" }
+otya-engine-sdk = { path = "../../crates/otya-engine-sdk" }
+otya-example-catalog-app = { path = "../../examples/catalog-app" }
+worker = "=0.8.7"
+
+# Keep the Cloudflare host adapter in its own workspace. Its workers-rs
+# toolchain is newer than the portable engine core's MSRV.
+[workspace]
+resolver = "2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

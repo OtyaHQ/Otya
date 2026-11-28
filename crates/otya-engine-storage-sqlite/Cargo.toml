@@ -1,0 +1,17 @@
+[package]
+name = "otya-engine-storage-sqlite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Optional, operator-owned SQLite storage adapter for Otya Engine"
+
+[dependencies]
+otya-engine-core = { path = "../otya-engine-core" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rusqlite.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+rustix = { version = "1.1.6", features = ["process"] }

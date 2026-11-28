@@ -1,0 +1,97 @@
+name: Otya Portable Core Targets
+
+on:
+  push:
+    branches:
+      - main
+      - "engine-only/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: otya-mobile-portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-core:
+    name: Compile portable core for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - x86_64-linux-android
+          - wasm32-unknown-unknown
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install stable Rust and target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add "${{ matrix.target }}"
+
+      - name: Compile the platform-neutral core
+        run: cargo check -p otya-engine-core --target "${{ matrix.target }}"
+
+      - name: Record target scope
+        run: |
+          echo "This is a compile-compatibility check for the portable core."
+          echo "It does not claim a complete Android app, APK, iOS app, JNI/FFI bridge or Cloudflare Worker adapter."
+
+  cloudflare-worker:
+    name: Check headless Cloudflare Workers adapter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Cloudflare Rust toolchain
+        run: |
+          rustup toolchain install 1.91.0 --profile minimal --component rustfmt --component clippy
+          rustup target add wasm32-unknown-unknown --toolchain 1.91.0
+          rustup default 1.91.0
+
+      - name: Check Cloudflare adapter formatting
+        run: cargo +1.91.0 fmt --manifest-path platforms/cloudflare-worker/Cargo.toml -- --check
+
+      - name: Compile the headless Worker and shared core to WebAssembly
+        run: cargo +1.91.0 check --manifest-path platforms/cloudflare-worker/Cargo.toml --target wasm32-unknown-unknown
+
+      - name: Set up Node.js for Wrangler
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install pinned Worker build tooling
+        env:
+          RUSTUP_TOOLCHAIN: 1.91.0
+        run: cargo install worker-build --version 0.8.7
+
+      - name: Build the deployable Worker and static assets
+        working-directory: platforms/cloudflare-worker
+        env:
+          RUSTUP_TOOLCHAIN: 1.91.0
+        run: worker-build --release
+
+      - name: Validate private production and public preview Wrangler profiles
+        working-directory: platforms/cloudflare-worker
+        run: |
+          set -euo pipefail
+          grep -Fq 'workers_dev = false' wrangler.toml
+          grep -Fq 'workers_dev = true' wrangler.preview.toml
+          npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.toml
+          npx --yes wrangler@4.169.0 deploy --dry-run --config wrangler.preview.toml
+
+      - name: Record runtime boundary
+        run: |
+          echo "This builds and validates a private production Engine Worker and a separate public read-only preview."
+          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."

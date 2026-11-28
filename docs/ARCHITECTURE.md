@@ -1,179 +1,166 @@
-# Otya Platform Architecture
+# Otya Engine Architecture
 
-**Status:** proposed architecture for the experimental foundation.
+**Status:** engine-only target architecture. This document defines intended boundaries; it is not a claim that every component is implemented.
 
-## 1. Product model
+## 1. Product definition
 
-Otya is one platform with multiple cooperating layers:
+Otya is a Rust-based, independently installable and embeddable application platform. Each installation belongs to one operator: an individual or organization choosing to run its own isolated environment. The complete distribution includes a local operator control plane and browser console, an installation-owned identity/login service, authorization primitives, reusable UI foundations and shared service modules. It is not a hosted SaaS product.
 
-1. Kernel and hardware foundation.
-2. Otya Engine.
-3. Otya Runtime and language toolchain.
-4. System services and standard interfaces.
-5. Applications, packages and developer tools.
-6. Otya OS distribution and user experience.
+Each installation has its own identity issuer, user/group directory, signing keys, configuration, storage, local credentials, logs, runtime services and lifecycle. One company may use one installation to manage many projects and allow selected apps to share staff sign-in and platform capabilities. Another company or individual installs a separate copy; no users, keys, services, data or control-plane state are shared across those installations.
 
-Otya Engine is independently installable. Otya OS is the complete operating environment that includes the engine and additional system components.
+Otya does not operate mandatory hosted compute, a global cloud control plane or a central customer database. The installed platform must perform local work without contacting Otya infrastructure.
 
-## 2. Kernel and hardware foundation
+An application may use the installation-owned identity provider for authentication. It remains responsible for its own business entities, resource permissions and product authorization. The Engine does not maintain a global user directory and does not decide whether an authenticated person may perform a product-specific business action.
 
-### Initial choice: Linux
+## 2. Architecture at a glance
 
-The initial supported target is Linux. The kernel provides low-level mechanisms that an operating environment needs, including process and memory management, scheduling, device drivers, filesystems and networking.
+```text
+One operator / one isolated installation
+          |
+          +-- Local operator control plane and browser console
+          |       +-- Workspaces / projects / environments
+          |       +-- Members / groups / roles / audit
+          |       +-- Modules / configuration / deployments
+          |
+          +-- Installation-owned identity platform
+          |       +-- Login / recovery / MFA / sessions
+          |       +-- Local user directory and OIDC issuer
+          |       +-- Client registrations / signing keys
+          |
+          +-- Shared capability services (scoped grants)
+          |       +-- Storage / jobs / events / files
+          |       +-- Notifications / secrets / observability
+          |       +-- Backup / restore / provider adapters
+          |
+          +-- Independent application projects
+          |       +-- Own source / data / business authorization
+          |       +-- Own UI / runtime components / releases
+          |
+          +-- CLI, SDK and embedded Rust core
+                  +-- install / configure / doctor
+                  +-- status / logs / backup / restore
+                  +-- upgrade / rollback / uninstall
+```
 
-Otya will not fork or replace the Linux kernel for the first milestone. The project should first prove that its engine and language offer a coherent, useful platform above a supported kernel.
+Embedded library, optional service and CLI reuse the same core contracts. The service is not required for embedded use.
 
-### Hardware interface
+## 3. Product layers
 
-Otya should expose stable, documented system interfaces instead of requiring every Otya application to call Linux-specific functions directly.
+### Application SDK and applications
 
-The engine maps those interfaces to the host kernel and supported devices. Hardware-specific code stays in reviewed system components and drivers; ordinary applications receive only the capabilities granted to them.
+The application SDK is a separate layer above the portable engine core. It defines versioned application manifests, exact route declarations, request/response contracts and host-supplied authorization context. Developers build independent applications on top of these contracts; the application owns its business logic, frontend, end-user identities and product rules. See [Applications on Otya](APPLICATIONS_ON_OTYA.md). The SDK does not turn the engine into one large business application.
 
-## 3. Otya Engine
+A frontend website or phone client calls the application's HTTPS API. The host adapter translates requests into application SDK calls. A website can be served separately or through a runtime's static-asset feature. The portable core remains headless; the full installation supplies a separate operator console, identity portal and reusable UI kit.
 
-The engine is the installable platform foundation. Its responsibilities are:
+### Core Rust library
 
-- Starting, supervising and stopping Otya services.
-- Loading and running Otya packages.
-- Enforcing declared application capabilities and resource budgets.
-- Providing stable filesystem, network, clock, process and device interfaces.
-- Managing package installation, verification, update and rollback.
-- Recording useful, privacy-conscious diagnostics.
-- Exposing versioned local system APIs.
-- Providing health checks and recovery paths.
+Owns configuration parsing, lifecycle state, typed errors, operation context, capability checks, module registration, provider-neutral operation state and stable extension interfaces. It does not create global users, cross-installation companies/tenants or a remote installation record. A separate installation-owned identity module may manage local users and clients. It avoids hidden network access and ambient filesystem access.
 
-The engine must remain useful on an existing supported Linux distribution. Installing it must not require replacing the user's operating system.
+### Operator CLI and installer
 
-## 4. Otya Language and compiler
+Owns local installation checks, configuration validation, service management for the selected deployment profile, migrations, backup/restore orchestration, health diagnostics and upgrade/rollback commands. Privileged steps are narrow, explicit and auditable.
 
-Otya source uses the .ot extension. The language is intended for application code, system automation and eventually selected platform services.
+### Optional service
 
-The compiler is responsible for:
+Owns durable background execution when the operator enables it: scheduled work, leased jobs, outbox dispatch, optional webhook intake, reconciliation and local API/IPC. The first service target runs under the installing OS user's account. A later server profile may use a dedicated unprivileged service account selected by the operator. Both profiles use separate owned state paths and private local sockets. There is no public TCP listener by default.
 
-- Lexing and parsing source files.
-- Producing clear source locations and diagnostics.
-- Type checking and validating module imports.
-- Enforcing language safety rules.
-- Compiling supported programs to the initial portable target.
-- Recording compiler and target versions in build metadata.
+This service is not a shared host for unrelated operators. The operator remains responsible for the host application's own user and business access model.
 
-The language specification is versioned separately from implementation details. Syntax changes must have compatibility notes and tests.
+### SDK and platform bindings
 
-## 5. Runtime and execution model
+The Rust API is canonical. The application-facing `otya-engine-sdk` currently provides an initial in-process application registry and route policy contract; it is an experimental workspace crate, not a released SDK package. The C ABI and optional Python/Flutter/Dart platform bindings are separate future integration surfaces. The Rust API is canonical. A deliberately versioned C ABI provides a native boundary for Flutter/Dart and Python packages. Each wrapper is thin and defines handle ownership, buffer lifetimes, threading and error semantics. Python support is a separately installable optional SDK; CPython is not embedded in the Otya core and Python is not a runtime requirement. Do not build separate business-logic implementations in Dart, Python or TypeScript.
 
-### Initial portable target
+### Host and provider adapters
 
-The initial application target is WebAssembly. The runtime should align with the WebAssembly Component Model and WASI, so separately compiled modules can use explicitly defined interfaces.
+Host adapters expose application routes through a runtime such as a native Linux HTTP service or Cloudflare Worker. Provider/storage adapters connect to operator-selected databases, files, secret stores, identity systems, messaging providers, cloud platforms and developer tools. The first Worker adapter now serves a static example website and routes its API to the sample catalog application; authentication and durable storage for real applications remain incomplete. They are optional, least-privilege and separately versioned.
 
-Wasmtime is the first runtime candidate because it supports embedding WebAssembly execution, WASI and the Component Model in host applications. It remains an implementation choice that must be validated for Otya's performance, platform and security requirements.
+## 4. Operating modes
 
-### Capability-based access
+1. **Embedded mode:** the host application links the Rust library. The application owns the process lifecycle. No daemon, listener, registration or network call is started by the engine.
+2. **Per-user service mode:** the installing OS user runs one local engine service for that user's trusted applications. The service has its own owner-only state paths and local socket.
+3. **Operator-managed server mode:** an operator may explicitly run one installation under a dedicated unprivileged service account on their own server. This is an operational deployment choice, not a shared Otya control plane or tenant-hosting feature.
 
-Applications receive no ambient access to the whole machine.
+A single-operator, single-installation deployment is the first target. Multi-operator shared hosting, tenant routing, clustering and multi-region replication are explicitly out of scope.
 
-A package declares the capabilities it needs. The installer or system administrator reviews and grants those capabilities. The runtime exposes only the approved interfaces.
+## 5. Storage and database boundary
 
-Examples of capability categories include:
+The engine is not a database product and does not host or operate a database for customers.
 
-- Read or write access to specific application data directories.
-- Network access to declared endpoints or approved network scopes.
-- Notifications.
-- Audio and media devices.
-- Selected system information.
-- User-approved device operations.
+- Storage is defined through explicit, versioned traits and transaction contracts.
+- Embedded SQLite is an optional local adapter for a single operator-owned installation.
+- PostgreSQL is an optional operator-managed adapter for deployments where concurrent processes or remote application clients require it. It does not make Otya a multi-tenant service.
+- In-memory storage is for tests or explicitly ephemeral workloads only.
+- Files and object storage are separate adapters; large binary objects should not be forced into relational tables.
+- Every adapter publishes transaction semantics, locking/concurrency behavior, migration rules, backup/restore behavior and supported versions.
 
-The exact capability vocabulary, consent flow and enforcement rules require a separate security specification. A manifest declaration is a request, not automatic authorization.
+Modules requiring durability must refuse to start with ephemeral storage. Never silently downgrade financial or audit records to memory.
 
-### Resource limits
+## 6. Modules and extension boundary
 
-The runtime must support configurable limits for execution time, memory, CPU use, concurrency and I/O where the host runtime permits them. Limits and failures must be observable and testable.
+Built-in first-party modules are Rust crates compiled against versioned engine interfaces. They register capabilities and migrations and cannot bypass core authorization or transaction boundaries.
 
-A sandbox reduces risk; it does not make every program safe. Native extensions, host interfaces, dependencies and the kernel remain part of the threat model.
+The engine does not supply a tenant/user directory. A business module may store records relevant to the installing operator's own application, but any end-user/company model belongs to that application/domain module and remains within that operator's chosen storage.
 
-## 6. System APIs and services
+Third-party extensions are not arbitrary native libraries loaded into the privileged engine process. The first safe extension strategy is a separate process behind a narrow authenticated local protocol. A sandboxed WebAssembly Component Model may be evaluated later as an optional module ABI; it is not an Otya language.
 
-Otya system APIs must be:
+## 7. Provider architecture
 
-- Versioned.
-- Documented with inputs, outputs, permissions and failure modes.
-- Backward-compatible within a declared compatibility window.
-- Covered by conformance tests.
-- Explicit about whether an operation is local, remote or provider-dependent.
+Cloudflare, GitHub, Resend and Firebase are optional operator-configured integrations.
 
-The engine must distinguish a local platform guarantee from an external service result. It must not claim that a third-party API, webhook, payment provider or identity service is functioning merely because a client can be configured.
+- GitHub is a source-control and release/CI provider; it is not needed to run an installed engine.
+- Cloudflare is an optional edge/infrastructure provider; Otya is not dependent on Workers.
+- Resend is optional email transport; SMTP and other providers remain possible.
+- Firebase is optional for mobile push or selected app-integrity integrations; it is not the engine's mandatory database or identity authority.
 
-Provider adapters should report unknown outcomes honestly. Retries must be safe and idempotent where the provider contract allows it.
+Every adapter declares scopes, secrets, outbound data, webhook verification, rate limits, timeouts, retries, idempotency, reconciliation, health checks and error mapping. Credentials are injected at runtime from operator-controlled secret stores.
 
-## 7. Packages and installation
+## 8. Reliability and data lifecycle
 
-### Package metadata
+Reliable operations require:
+- durable idempotency keys and request digests;
+- transactional outbox and webhook inbox patterns;
+- leased jobs, bounded retries, exponential backoff and jitter;
+- circuit breakers and provider rate-limit awareness;
+- explicit unknown outcomes and reconciliation before unsafe retries;
+- append-only audit events for sensitive operations;
+- crash-safe startup, graceful shutdown and lease recovery;
+- versioned migrations and interrupted-upgrade recovery;
+- encrypted, checksummed backups and restore drills;
+- data export and deletion paths.
 
-The proposed package manifest is otya.toml. It identifies the package, version, entry point, runtime target, dependencies and requested capabilities.
+Exactly-once effects across remote providers cannot be guaranteed by the engine alone. Use at-least-once delivery with provider idempotency and reconciliation where available, and expose uncertainty rather than claiming false success.
 
-The proposed archive extension is .otpkg. Its binary layout, signature rules, compression, content addressing and repository protocol are not stable yet.
+## 9. Linux and security model
 
-### Engine installation
-
-The engine installer should support a minimal install on a supported Linux distribution, validate host compatibility, preserve existing user data, verify downloaded artifacts and provide a documented removal and recovery path.
-
-### Otya OS installation
-
-A later Otya OS image can bundle the supported Linux kernel, boot and system services, Otya Engine, standard library, user experience and selected applications.
-
-An installable engine kit and a bootable Otya OS image are related deliverables, not the same artifact.
-
-## 8. Developer experience
-
-The planned CLI is otya. Its intended commands include:
-
-- otya new — create a project.
-- otya check — parse, type-check and validate a project.
-- otya build — compile it for a supported target.
-- otya run — run a project under the development runtime.
-- otya test — run project tests.
-- otya fmt — format source.
-- otya package — build a distributable package.
-- otya install — install a package or, in a separate documented mode, the engine.
-- otya doctor — diagnose host and engine configuration.
-
-These are planned command names, not currently available commands.
-
-## 9. Security boundaries
-
-The initial threat model must include malicious or compromised packages, dependency substitution, compromised update repositories, hostile input, resource exhaustion, unsafe native extensions and vulnerabilities in the runtime or host kernel.
-
-Minimum design requirements:
-
-- Deny-by-default application capabilities.
-- No root privileges for ordinary applications.
-- Verified package and update metadata.
-- Reproducible or independently verifiable build artifacts where practical.
-- Resource limits and bounded logs.
-- Explicit administrator approval for privileged system changes.
-- Security review for native extensions and kernel-facing components.
-- Clear reporting and response procedures for vulnerabilities.
-
-Do not claim the platform is secure until the relevant controls have been implemented and independently tested.
+- Run as the installing OS user by default; never require root for ordinary embedded or per-user operation.
+- For an operator-managed server deployment, allow one dedicated unprivileged service account only when explicitly configured. It must not become an implicit shared service for unrelated operators.
+- Keep configuration, durable data, logs, cache and runtime socket in separate per-installation directories.
+- Use owner-only file and socket permissions; reject symlink/path escapes when creating managed files.
+- Use Linux process isolation and systemd resource/sandbox controls where available and verified.
+- Do not treat namespaces, cgroups, seccomp or AppArmor as universally available. Detect platform support and document limitations.
+- Do not expose local IPC over TCP by default.
+- Keep secrets out of source, plain config, logs and diagnostics.
+- No cross-installation tenant or end-user directory. An installation may authenticate its own users; the host app authorizes product-specific actions.
 
 ## 10. Existing Otya ecosystem boundary
 
-The engine is not a replacement for the existing Otya backend or product databases.
+OEnd remains the backend and integrations platform for Otya's own products. OID remains the existing person-identity service. Omy Play and Opoint retain product data and product-specific authorization.
 
-OEnd, OID and the individual Otya products retain their current ownership and authorization rules. Any future bridge must be a separately documented, versioned integration with least-privilege permissions.
+Otya Engine must work independently. Its own identity service is per-installation and optional to applications. OEnd and OID remain existing ecosystem services during migration; do not assume access to Otya cloud services or require Otya identities for Engine startup or local operation.
 
-Otya Engine should first work as a standalone platform. Ecosystem integration is an optional layer built on stable public interfaces, not a dependency required to boot or use the engine.
+## 11. Supported-platform strategy
 
-## 11. Quality gates
+- Initial target: supported Linux distributions on x86_64 and aarch64.
+- Keep domain logic and core contracts OS-neutral; isolate filesystem, process, service-manager and IPC differences behind platform modules.
+- Embedded API: Rust first; a versioned C ABI for native host bindings.
+- Flutter/Dart and Python wrappers follow only after FFI lifecycle tests.
+- Windows and macOS installation targets follow after Linux lifecycle is reliable.
+- Cloudflare Workers/Wasm is an optional adapter target, not canonical deployment.
 
-A component is not considered ready because its source code exists. Each release must include evidence for:
+## 12. Engineering influences
 
-- Unit and integration tests.
-- Compiler and runtime conformance tests.
-- Supported-host and hardware matrix.
-- Security and dependency checks.
-- Installation, update, rollback and uninstall tests.
-- Compatibility tests between engine, runtime, language and package versions.
-- Performance and resource measurements.
-- Recovery documentation and a tested recovery procedure.
+Otya adopts lessons from Linux, Python, Rust/Cargo, Unix service management, SQLite and OCI without cloning those projects. The rule is to reuse standards and host capabilities where they are proven, and build Otya's own stable engine contracts and reusable modules. See [Engineering influences](ENGINEERING_INFLUENCES.md).
 
-The release status must distinguish design-complete, implemented, CI-tested, manually verified and production-deployed.
+## 13. Release acceptance
+
+A release requires build, unit, integration, failure-injection, compatibility, install/upgrade/rollback/uninstall, backup/restore, security, resource-limit and documentation evidence. Publish exact platforms, features, adapters and limitations tested.

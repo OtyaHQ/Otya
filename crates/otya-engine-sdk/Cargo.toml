@@ -1,0 +1,12 @@
+[package]
+name = "otya-engine-sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Application-facing SDK and headless route registry for Otya Engine"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
