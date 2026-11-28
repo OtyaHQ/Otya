@@ -61,10 +61,10 @@ jobs:
           rustup default 1.91.0
 
       - name: Check Cloudflare adapter formatting
-        run: cargo fmt --manifest-path platforms/cloudflare-worker/Cargo.toml -- --check
+        run: cargo +1.91.0 fmt --manifest-path platforms/cloudflare-worker/Cargo.toml -- --check
 
       - name: Compile the headless Worker and shared core to WebAssembly
-        run: cargo check --manifest-path platforms/cloudflare-worker/Cargo.toml --target wasm32-unknown-unknown
+        run: cargo +1.91.0 check --manifest-path platforms/cloudflare-worker/Cargo.toml --target wasm32-unknown-unknown
 
       - name: Record runtime boundary
         run: |
