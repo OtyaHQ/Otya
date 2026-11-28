@@ -78,7 +78,11 @@ fn run(cli: Cli) -> Result<(), String> {
             } else {
                 println!("Otya Engine local diagnostics");
                 println!("version: {}", env!("CARGO_PKG_VERSION"));
-                println!("host: {} / {}", std::env::consts::OS, std::env::consts::ARCH);
+                println!(
+                    "host: {} / {}",
+                    std::env::consts::OS,
+                    std::env::consts::ARCH
+                );
                 println!("network: not used by this diagnostic");
                 println!("result: {}", report.result);
                 for check in report.checks {
@@ -124,7 +128,8 @@ fn doctor_report() -> DoctorReport {
             DoctorCheck {
                 name: "service",
                 status: "not_implemented",
-                detail: "The optional local service is not part of this initial CLI milestone.".to_owned(),
+                detail: "The optional local service is not part of this initial CLI milestone."
+                    .to_owned(),
             },
         ],
     }
@@ -134,8 +139,7 @@ fn validate_config(file: &Path, json: bool) -> Result<(), String> {
     let source = fs::read_to_string(file)
         .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
 
-    let config =
-        parse_config(&source).map_err(|error| format!("{}: {error}", file.display()))?;
+    let config = parse_config(&source).map_err(|error| format!("{}: {error}", file.display()))?;
     let report = config.validate();
 
     if json {
