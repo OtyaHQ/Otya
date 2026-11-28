@@ -66,7 +66,27 @@ jobs:
       - name: Compile the headless Worker and shared core to WebAssembly
         run: cargo +1.91.0 check --manifest-path platforms/cloudflare-worker/Cargo.toml --target wasm32-unknown-unknown
 
+      - name: Set up Node.js for Wrangler
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install pinned Worker build tooling
+        env:
+          RUSTUP_TOOLCHAIN: 1.91.0
+        run: cargo install worker-build --version 0.8.7
+
+      - name: Build the deployable Worker and static assets
+        working-directory: platforms/cloudflare-worker
+        env:
+          RUSTUP_TOOLCHAIN: 1.91.0
+        run: worker-build --release
+
+      - name: Validate Wrangler bundle and static asset configuration
+        working-directory: platforms/cloudflare-worker
+        run: npx --yes wrangler@4.169.0 deploy --dry-run --name otya-engine-ci-preview
+
       - name: Record runtime boundary
         run: |
-          echo "This checks a headless Rust Worker entrypoint and the shared core."
-          echo "It does not claim D1/Queues adapters, durable background operations, or a production deployment."
+          echo "This builds and validates a headless Rust Worker with static website assets."
+          echo "It does not claim D1/Queues adapters, durable background operations, authentication, or a production deployment."
