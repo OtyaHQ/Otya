@@ -21,25 +21,29 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-At Otya Engine CI run 84, commit c3ccb70a6778b4076b3d08b3ab80bcc80bb4c1cd, the branch contains:
+At Otya Engine CI run 115, commit `942041fa685ce1e00527e4d7011669ece324d892`, the branch contains:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
 - local CLI commands for version, doctor, paths and configuration validation;
 - Linux XDG path resolution for config, data, state, cache and optional runtime directories;
-- tests for default paths, absolute overrides, relative override rejection, missing runtime directory and invalid HOME;
-- stable Rust formatting, Clippy, tests, CLI smoke checks, example validation and release build;
+- named local instance path separation and validation;
+- explicit private-directory preparation via safe rustix directory-descriptor operations;
+- no-follow path walking, parent ownership/mode checks, refusal of root execution and 0700 final Otya directories;
+- tests for default paths, overrides, instance separation, unsafe instance names, create/idempotency, mode hardening, symlink rejection, unsafe parent rejection and relative paths;
+- stable Rust formatting, Clippy, unit tests, CLI smoke checks, example validation and release build;
 - Rust 1.85 minimum-version compile and test pass.
 
-The path resolver only computes path names. It does not create directories, validate their owner or mode, reject symlink substitution, test free space or perform filesystem writes.
+The filesystem tests and smoke command verify the behavior on the GitHub-hosted Linux runner. They are not a substitute for a supported distribution matrix or physical-host installation tests. Directory creation does not yet create or update configuration files.
 
 ## Gap register
 
 | Area | Current status | What is missing before production use |
 |---|---|---|
-| Independent installation boundary | Partially implemented; configuration and architecture encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
+| Independent installation boundary | Partially implemented; configuration, named local paths and filesystem isolation encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
 | No Otya control plane | Documented; current CLI has no remote calls | Automated network-egress tests proving local startup and embedded operation never phone home |
-| Linux directory discovery | Pure XDG resolution implemented and CI-verified | Secure filesystem creation, owner/mode checks, symlink-safe opens, multiple installation roots and tests across clean Linux hosts |
+| Linux directory discovery | XDG resolver and private directory preparation implemented and CI-verified | Physical distribution tests, arbitrary custom roots, free-space checks and broader install lifecycle |
+| Configuration lifecycle | Strict parsing and validation implemented | Safe create-only config generation, atomic replacement, schema migration and file-level symlink/ownership tests |
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
@@ -47,7 +51,7 @@ The path resolver only computes path names. It does not create directories, vali
 | Operation engine | Reliability model documented only | Operation state machine, idempotency store, outbox/inbox, leases, retry scheduler, dead-letter review and reconciliation |
 | Backup and restore | Documented only | Consistent backup, checksums, operator-controlled encryption keys, restore validation, migration compatibility and recovery drills |
 | Secrets | Operator-owned approach documented | Secret-provider abstraction, OS keyring/vault adapters, rotation and log-redaction tests |
-| Security and authorization | Unsafe code forbidden in the initial core; scope rules documented | Threat model, capability enforcement, host-authorization context, secure IPC and authorization tests |
+| Security and authorization | Initial filesystem boundary is CI-verified; broader scope rules are documented | Threat model, capability enforcement, host-authorization context, authenticated IPC and authorization tests |
 | Provider adapters | Provider mapping documented | Generic HTTP/webhook foundation, sandbox fixtures, credentials, scopes, rate limits, retries, signatures and adapter conformance tests |
 | Business modules | Priority list only | Versioned domain contracts, migrations, permissions, audit events, business invariants and failure tests |
 | Module and extension system | Design documented | Registry, dependency/version resolution, signatures, safe disable/uninstall and isolated third-party process runtime |
