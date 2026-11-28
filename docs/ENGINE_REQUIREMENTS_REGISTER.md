@@ -9,7 +9,7 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] No mandatory Otya account, hosted control plane, database, compute or telemetry.
 - [ ] Host application owns its users, business identities and permissions.
 - [ ] Separate operators use separate isolated installations; no implicit sharing.
-- [ ] One operator can explicitly maintain multiple isolated installations with distinct paths and processes.
+- [x] One operator can create separate named local instances under its own OS account, each with separate XDG paths.
 - [ ] No central heartbeat, usage metering or remote enable/disable path.
 
 ## Installation and Linux lifecycle
@@ -17,10 +17,11 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [x] Rust workspace with core and CLI crates, pinned stable channel and declared MSRV.
 - [x] Strict versioned TOML configuration and local CLI version/doctor/config validation.
 - [x] Linux XDG path-name resolution and read-only CLI paths command, with unit tests and CI smoke test.
+- [x] Explicit Linux directory preparation with owner-only permissions, parent validation, no-follow path walking and unit/CI smoke tests.
 - [ ] Embedded library is the primary artifact with stable public API.
 - [ ] CLI doctor validates actual filesystem ownership, permissions, symlink risk, disk space and host prerequisites.
-- [ ] Secure directory creation, atomic configuration writes and safe installation roots.
-- [ ] Explicit installation-root override for multiple isolated instances under one OS user.
+- [ ] Safe configuration creation, atomic replacement, explicit preservation and migration behavior.
+- [ ] Arbitrary custom installation-root override beyond XDG paths and named local instances.
 - [ ] Optional per-user service with owner-only local IPC.
 - [ ] CLI for install, status, logs, service lifecycle and self-test.
 - [ ] Installer preflight for OS, architecture, storage, memory and permissions.
