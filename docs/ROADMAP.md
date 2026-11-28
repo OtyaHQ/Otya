@@ -11,6 +11,9 @@ Deliverables:
 - One installation, one operator boundary, many workspaces/projects/components; a local operator-controlled control plane manages that operator's estate.
 - No global Otya-hosted control plane, cross-operator registry, shared customer pool or mandatory vendor heartbeat.
 - Explicit distinction between operator/workspace/project/component/environment scope and application end-user identity.
+- Complete self-hosted platform distribution: local operator console, installation-owned identity issuer, authorization, UI kit and shared service catalogue.
+- Per-installation identity realm and user directory; no cross-installation shared Otya identity or customer registry.
+- Non-developer administration through a browser UI backed by the same versioned management API and reviewable configuration as the CLI.
 - Embedded-library, optional local-service and CLI model.
 - Customer-operated responsibility and data ownership model.
 - Module, storage and provider adapter contracts.
@@ -33,6 +36,21 @@ Deliverables:
 - Failure isolation: one project's update, outage or rollback must not mutate another project.
 
 Exit gate: one disposable installation can inventory multiple independent sample projects and components, prove explicit service grants, and demonstrate that revoking a grant or rolling back one project does not affect another.
+
+## E0.75 — Full platform distribution and operator experience
+
+**Goal:** define the installable product as a complete private platform, not only an embedded library.
+
+Deliverables:
+- Local control plane, supervisor and authenticated management API.
+- Browser operator console and first-run setup wizard.
+- Installation-owned identity service, login portal and user/group directory.
+- Authentication and authorization as separate contracts.
+- Reusable UI kit, design tokens and application templates.
+- Optional shared service modules with per-project grants.
+- Non-developer workflows for members, roles, services, health and deployments.
+
+Exit gate: a fresh isolated installation can be configured and administered locally; no account at Otya is needed; a second installation has separate users, signing keys, data and modules.
 
 ## E1 — Rust workspace, build and operator CLI
 
@@ -172,7 +190,7 @@ Deliverables:
 - Cross-target compile checks as compatibility evidence, not as proof of a complete app.
 - Version compatibility matrix and integration examples.
 
-No standalone Otya Android/iOS app, APK or app-store product is planned in this repository. Android target checks do not imply an APK delivery pipeline. Any future host-application SDK must remain optional and must not become a requirement for the engine's headless runtime.
+No standalone Otya Android/iOS app, APK or app-store product is planned in this repository. The complete installation may provide a browser-based operator console and UI toolkit, but the Rust core remains headless and hostable. Android target checks do not imply an APK delivery pipeline.
 
 **Exit gate:** host SDK lifecycle, compatibility, ownership and authorization tests pass; HTTP API authentication and versioning are stable; optional bindings do not introduce mandatory mobile UI or platform dependencies.
  
@@ -208,6 +226,6 @@ Every milestone preserves:
 - No Otya programming language or compiler in this repository.
 - No mandatory Otya-hosted compute, database, storage or control plane.
 - No replacement kernel or complete OS distribution in the initial engine project.
-- No engine-managed company, customer, tenant or end-user registry.
+- No global or cross-installation company, customer, tenant or end-user registry. Each independent installation may own its local identity realm and user directory.
 - No assumption that a provider adapter makes an external API available, legal or reliable.
 - No multi-operator shared-hosting, clustering or high-availability guarantee before separately designed and tested.
