@@ -25,6 +25,11 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Install system SQLite development library
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libsqlite3-dev pkg-config
+
       - name: Install stable Rust
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy
@@ -69,6 +74,11 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install system SQLite development library
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libsqlite3-dev pkg-config
 
       - name: Install MSRV Rust
         run: |
