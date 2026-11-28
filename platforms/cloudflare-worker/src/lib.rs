@@ -6,9 +6,7 @@
 //! dispatched through the same application SDK used by native applications.
 //! This adapter does not add a central Otya account or customer directory.
 
-use otya_engine_sdk::{
-    ApplicationRegistry, ApplicationRequest, CallerContext, HttpMethod,
-};
+use otya_engine_sdk::{ApplicationRegistry, ApplicationRequest, CallerContext, HttpMethod};
 use otya_example_catalog_app::CatalogApplication;
 use worker::{Context, Env, Headers, Method, Request, Response, Result, event};
 
@@ -34,9 +32,9 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     if path.starts_with("/api/") {
         let mut registry = ApplicationRegistry::new();
-        registry
-            .register(CatalogApplication)
-            .map_err(|_| worker::Error::RustError("application registry configuration is invalid".into()))?;
+        registry.register(CatalogApplication).map_err(|_| {
+            worker::Error::RustError("application registry configuration is invalid".into())
+        })?;
 
         // Authentication is intentionally anonymous in this public read-only
         // sample. Protected routes must receive a CallerContext created by an
