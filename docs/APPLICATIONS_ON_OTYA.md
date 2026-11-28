@@ -101,11 +101,13 @@ A website is a frontend that can be deployed separately from the engine. It call
 
 The first Cloudflare example uses Workers Static Assets:
 - the HTML/CSS/JavaScript website is under `platforms/cloudflare-worker/public/`;
-- the Worker handles `/health` and `/version`;
+- the Worker handles `/health`, `/version` and `/capabilities`;
 - Worker-first routing sends `/api/*` to the application registry;
 - remaining paths are served by the static-assets binding.
 
 The sample page calls `GET /api/v1/catalog/items` and renders the JSON response. It demonstrates the boundary between an application frontend and an Otya-powered API.
+
+The `/capabilities` document reports the Engine version, application API version, host runtime, implemented features and current limitations. It is descriptive only; it does not authorize requests or replace host authentication.
 
 The same pattern can power a responsive web application or an existing phone app's API calls. The engine does not need to become an Android app. Frontends must not contain provider API tokens or server-side credentials.
 
