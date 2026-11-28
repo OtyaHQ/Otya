@@ -25,8 +25,8 @@ pub use paths::{
 
 #[cfg(target_os = "linux")]
 pub use secure_fs::{
-    PreparedDirectory, SecureFsError, create_private_file, prepare_engine_config_directory,
-    prepare_engine_directories,
+    PreparedDirectory, PreparedFile, SecureFsError, create_private_file,
+    prepare_engine_config_directory, prepare_engine_directories, prepare_private_file,
 };
 
 /// Version of the configuration schema understood by this core release.
