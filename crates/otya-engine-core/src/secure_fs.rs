@@ -25,6 +25,13 @@ pub struct PreparedDirectory {
     pub permissions_hardened: bool,
 }
 
+/// Result of opening and hardening one existing private regular file.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PreparedFile {
+    pub path: PathBuf,
+    pub permissions_hardened: bool,
+}
+
 /// A filesystem path was unsafe or could not be prepared.
 #[derive(Debug, Error)]
 pub enum SecureFsError {
@@ -58,6 +65,16 @@ pub enum SecureFsError {
     InvalidFileName(String),
     #[error("configuration file already exists and was not changed: {0}")]
     FileAlreadyExists(PathBuf),
+    #[error("managed file is not a regular file: {0}")]
+    NotRegularFile(PathBuf),
+    #[error(
+        "Otya-managed file {path} is owned by uid {actual_uid}, expected current effective uid {expected_uid}"
+    )]
+    WrongFileOwner {
+        path: PathBuf,
+        expected_uid: u64,
+        actual_uid: u64,
+    },
     #[error(
         "writing {path} failed ({write_error}); cleanup of the incomplete file also failed ({cleanup_error})"
     )]
@@ -247,6 +264,18 @@ pub fn prepare_engine_config_directory(
     ensure_private_directory("configuration", &paths.config_dir)
 }
 
+fn validate_file_name(file_name: &str) -> Result<(), SecureFsError> {
+    if file_name.is_empty()
+        || file_name == "."
+        || file_name == ".."
+        || file_name.contains('/')
+        || file_name.contains('\\0')
+    {
+        return Err(SecureFsError::InvalidFileName(file_name.to_owned()));
+    }
+    Ok(())
+}
+
 /// Exclusively create a private file inside a verified operator-owned directory.
 ///
 /// The parent directory is re-opened without following symlinks. O_EXCL means
@@ -310,6 +339,58 @@ pub fn create_private_file(
         .map_err(|error| io_error("sync private file's parent directory", &file_path, error))?;
 
     Ok(file_path)
+}
+
+/// Open an existing operator-owned regular file without following symlinks.
+///
+/// The parent directory is verified with the same no-follow descriptor walk as
+/// directory creation. The file must be owned by the current operator and is
+/// hardened to mode 0600. This function never creates or truncates a file.
+pub fn prepare_private_file(
+    directory: &Path,
+    file_name: &str,
+) -> Result<PreparedFile, SecureFsError> {
+    if geteuid().is_root() {
+        return Err(SecureFsError::RunningAsRoot);
+    }
+    validate_file_name(file_name)?;
+
+    let (directory_fd, _, _) = open_verified_private_directory(directory)?;
+    let file_path = directory.join(file_name);
+    let file_fd = openat(
+        &directory_fd,
+        file_name,
+        OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
+        Mode::empty(),
+    )
+    .map_err(|error| io_error("open managed file without following symlinks", &file_path, error))?;
+
+    let metadata =
+        fstat(&file_fd).map_err(|error| io_error("inspect managed file", &file_path, error))?;
+    if metadata.st_mode & 0o170000 != 0o100000 {
+        return Err(SecureFsError::NotRegularFile(file_path));
+    }
+
+    let expected_uid = geteuid().as_raw() as u64;
+    let owner_uid = u64::from(metadata.st_uid);
+    if owner_uid != expected_uid {
+        return Err(SecureFsError::WrongFileOwner {
+            path: file_path,
+            expected_uid,
+            actual_uid: owner_uid,
+        });
+    }
+
+    let permissions_hardened = metadata.st_mode & 0o7777 != 0o600;
+    if permissions_hardened {
+        fchmod(&file_fd, Mode::from_raw_mode(0o600))
+            .map_err(|error| io_error("set managed file permissions", &file_path, error))?;
+    }
+
+    Ok(PreparedFile {
+        path: file_path,
+        permissions_hardened,
+    })
 }
 
 fn io_error(operation: &'static str, path: &Path, error: Errno) -> SecureFsError {
@@ -432,6 +513,53 @@ mod tests {
                 Err(SecureFsError::InvalidFileName(_))
             ));
         }
+    }
+
+    #[test]
+    fn prepares_existing_regular_file_and_hardens_its_permissions() {
+        if geteuid().is_root() {
+            return;
+        }
+
+        let root = temporary_root("prepare-file");
+        let data_dir = root.join("data");
+        ensure_private_directory("data", &data_dir)
+            .expect("data directory should be prepared");
+        let database = data_dir.join("engine.db");
+        fs::write(&database, b"placeholder").expect("placeholder should be written");
+        fs::set_permissions(&database, fs::Permissions::from_mode(0o644))
+            .expect("broad permissions should be set");
+
+        let prepared =
+            prepare_private_file(&data_dir, "engine.db").expect("file should be hardened");
+        assert!(prepared.permissions_hardened);
+        assert_eq!(
+            fs::metadata(&database)
+                .expect("file metadata should be available")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+        fs::remove_dir_all(root).expect("test tree should be removed");
+    }
+
+    #[test]
+    fn refuses_to_open_symlinks_and_non_regular_files() {
+        if geteuid().is_root() {
+            return;
+        }
+
+        let root = temporary_root("prepare-file-nofollow");
+        let data_dir = root.join("data");
+        ensure_private_directory("data", &data_dir)
+            .expect("data directory should be prepared");
+        let target = root.join("outside.db");
+        fs::write(&target, b"target").expect("target should be written");
+        symlink(&target, data_dir.join("linked.db")).expect("symlink should be created");
+
+        assert!(prepare_private_file(&data_dir, "linked.db").is_err());
+        fs::remove_dir_all(root).expect("test tree should be removed");
     }
 
     #[test]
