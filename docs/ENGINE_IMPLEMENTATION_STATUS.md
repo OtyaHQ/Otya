@@ -27,11 +27,16 @@
 - Phone-first and headless-runtime architecture guides distinguish remote development/control from the engine's runtime.
 - A separate Cloudflare Workers Rust/WebAssembly host adapter serves /health and /version, a responsive static example website and the example catalog API; Worker compile checks passed on run 90. A first deployed preview and browser end-to-end test have not been performed.
 - The application SDK, example application and route-level tests are committed: manifests, exact routes, application API version checks, host-supplied caller context, access policies, declared capability checks and request/response bounds.
+- Initial provider metadata contracts added to the Rust core: provider kind/auth method, credential-store references (no raw credential value field), provider connection, project/environment resource binding and project capability grant. Validation rejects missing credential references, duplicate scopes/references and grants that do not match the selected resource/environment. This is metadata only; it does not yet persist connections, resolve secrets or call provider APIs.
 - A manual GitHub Actions deployment workflow can deploy a preview Worker or production Worker from main using operator-owned Cloudflare secrets. It does not auto-deploy and does not contain credentials.
-- The engine product is explicitly headless: no standalone Otya Android/iOS app, APK, desktop GUI or app-store product is planned.
+- The portable Rust core remains headless. The complete platform distribution is planned to include a browser-based operator console and identity portal; no standalone Otya Android/iOS app, APK or native desktop application is planned.
 - Local commands do not make network calls.
 - Comprehensive engine gap audit and staged implementation plan documented.
 - Obsolete .ot language example removed from the active engine branch.
+
+## Latest provider-contract CI state
+
+At branch head `368588ef52725c9a6edc48cc018331296b57d5a9`, the Rust quality job has passed formatting, Clippy, workspace tests, CLI diagnostics, SQLite smoke tests and example configuration validation. The release-binary build was still running at the last inspection. The minimum-Rust-version build and Android/WebAssembly/Cloudflare portability workflow were also still in progress. See [Otya Engine CI run 46159074134](https://github.com/OtyaHQ/Otya/actions/runs/46159074134) and [portable targets run 46159074138](https://github.com/OtyaHQ/Otya/actions/runs/46159074138). Do not mark the new provider code fully CI-verified until both workflows complete successfully.
 
 ## CI evidence
 
@@ -53,7 +58,7 @@ The CI results verify the tested Linux workspace and portable-core target compil
 - Per-user service and authenticated local IPC.
 - Linux installer, package signatures and service hardening.
 - Committed dependency lockfile and CI enforcement of locked dependency resolution.
-- Secret-store abstraction and provider clients.
+- Credential vault and secret resolver; persistent provider connection registry; Cloudflare/Firebase/Supabase and generic provider API clients.
 - Durable job queue, scheduler, outbox, inbox and webhook verification.
 - Backup, restore, migrations and crash recovery.
 - Production host-application authorization integration, secure session/token verification and real application-user permissions.
@@ -61,7 +66,8 @@ The CI results verify the tested Linux workspace and portable-core target compil
 - Persistent application schemas, migrations, durable operations and background jobs.
 - Stable C ABI, Python and optional Kotlin/JNI or Flutter/Dart host-application SDKs; no SDK packages are released yet.
 - Android/iOS platform-specific embedding adapters only if a host application needs them; no standalone Otya mobile app or APK pipeline is planned.
-- Generic authenticated HTTP management/API server and async remote-storage/operation contracts.
+- Generic authenticated HTTP management/API server, language-neutral OpenAPI contracts and async remote-storage/operation contracts.
+- Browser-based Console, installation-owned Identity portal, Otya UI kit/Studio, provider connection wizard and deployment orchestration.
 - Codespaces devcontainer first-launch validation on a real phone browser.
 - Cross-platform installers, signed release artifacts, SBOM and build provenance.
 
