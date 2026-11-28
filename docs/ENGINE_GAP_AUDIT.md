@@ -21,15 +21,17 @@ A server installation may use a dedicated unprivileged OS service account. That 
 
 ## Current verified foundation
 
-At the passing Rust CI revision, the branch contains:
+At Otya Engine CI run 84, commit c3ccb70a6778b4076b3d08b3ab80bcc80bb4c1cd, the branch contains:
 - Rust workspace with the Otya core and CLI crates;
 - strict versioned TOML configuration parsing and validation;
 - rejection of unknown configuration fields, including company, tenant and user identity fields;
-- local CLI commands for version, doctor and configuration validation;
-- tests for the initial configuration rules;
-- stable Rust quality workflow and Rust 1.85 minimum-version workflow.
+- local CLI commands for version, doctor, paths and configuration validation;
+- Linux XDG path resolution for config, data, state, cache and optional runtime directories;
+- tests for default paths, absolute overrides, relative override rejection, missing runtime directory and invalid HOME;
+- stable Rust formatting, Clippy, tests, CLI smoke checks, example validation and release build;
+- Rust 1.85 minimum-version compile and test pass.
 
-The XDG path-resolution implementation and the CLI paths command were added after that passing revision. They must not be described as CI-verified until a workflow for the new head passes.
+The path resolver only computes path names. It does not create directories, validate their owner or mode, reject symlink substitution, test free space or perform filesystem writes.
 
 ## Gap register
 
@@ -37,7 +39,7 @@ The XDG path-resolution implementation and the CLI paths command were added afte
 |---|---|---|
 | Independent installation boundary | Partially implemented; configuration and architecture encode the rule | End-to-end tests proving separate OS users and separate installation roots cannot read each other's state |
 | No Otya control plane | Documented; current CLI has no remote calls | Automated network-egress tests proving local startup and embedded operation never phone home |
-| Linux directory discovery | Initial implementation added; verification pending | Real filesystem creation, ownership/mode checks, symlink-safe opens, path migration and tests across clean Linux hosts |
+| Linux directory discovery | Pure XDG resolution implemented and CI-verified | Secure filesystem creation, owner/mode checks, symlink-safe opens, multiple installation roots and tests across clean Linux hosts |
 | Installer and packaging | Documented only | Signed packages, preflight, safe install, uninstall, interrupted-install recovery, upgrade and rollback |
 | Service runtime | Example unit only | Real daemon, signal handling, service health, resource limits, restart behavior and tested systemd integration |
 | Local IPC | Documented only | Versioned protocol, peer authentication, socket permissions, request limits and client library |
@@ -54,7 +56,7 @@ The XDG path-resolution implementation and the CLI paths command were added afte
 | Cross-platform support | Linux-first strategy documented | Verified Linux distro/libc matrix first; Windows and macOS implementations only after platform abstraction tests |
 | Observability | Design documented | Structured logs, rotation, health/readiness, metrics, traces, correlation and redacted support bundle |
 | Performance | Release profile configured; no benchmark baseline | Startup, idle memory, binary size, throughput, latency, concurrency and soak benchmarks with named reference hardware |
-| Release engineering | Basic CI exists | Multi-architecture builds, signed artifacts, SBOM, provenance, reproducible release process, release channels and rollback evidence |
+| Release engineering | Basic CI exists | Cargo.lock committed and enforced with --locked, multi-architecture builds, signed artifacts, SBOM, provenance, reproducible release process, release channels and rollback evidence |
 | Governance | Security and contribution guidance exists | Approved license, trademark policy, contributor terms, vulnerability reporting, support policy and release-key custody |
 
 ## Decisions to preserve
@@ -72,16 +74,16 @@ The XDG path-resolution implementation and the CLI paths command were added afte
 ### E1 — Local platform discovery and operator diagnostics
 
 - Resolve per-operator config, data, state, cache and runtime paths.
-- Add the CLI paths command and make doctor inspect real local prerequisites.
-- Check absolute paths, directory ownership, permissions, free space and symlink risks.
+- Provide the read-only paths command and local diagnostics.
+- Check absolute path inputs and report invalid environment overrides.
 - Keep discovery read-only; directory creation belongs to an explicit installer command.
-- Add isolated test environments without mutating global test-process environment variables.
+- Add isolated tests without mutating global process environment variables.
 
-**Acceptance:** commands produce accurate local diagnostics on clean Linux hosts, do not make network calls and never create or modify files merely by inspecting paths.
+**Acceptance:** commands produce accurate local path diagnostics on Linux, do not make network calls and never create or modify files merely by inspecting paths.
 
 ### E2 — Secure local filesystem and configuration lifecycle
 
-- Explicit install roots and override rules.
+- Explicit install roots and override rules, including multiple isolated installs by one operator.
 - Secure directory creation with owner-only permissions.
 - Safe file creation/opening that resists symlink substitution and path traversal.
 - Atomic config writes, backups and schema migration.
