@@ -58,7 +58,9 @@ pub enum SecureFsError {
     InvalidFileName(String),
     #[error("configuration file already exists and was not changed: {0}")]
     FileAlreadyExists(PathBuf),
-    #[error("writing {path} failed ({write_error}); cleanup of the incomplete file also failed ({cleanup_error})")]
+    #[error(
+        "writing {path} failed ({write_error}); cleanup of the incomplete file also failed ({cleanup_error})"
+    )]
     FileWriteCleanup {
         path: PathBuf,
         write_error: io::Error,
@@ -124,9 +126,7 @@ fn ensure_private_directory(
 /// Open a directory by walking from the filesystem root with O_NOFOLLOW.
 /// Every intermediate directory must have a trusted owner and safe write mode;
 /// the final Otya directory is owned by this operator and hardened to 0700.
-fn open_verified_private_directory(
-    path: &Path,
-) -> Result<(OwnedFd, bool, bool), SecureFsError> {
+fn open_verified_private_directory(path: &Path) -> Result<(OwnedFd, bool, bool), SecureFsError> {
     if !path.is_absolute() {
         return Err(SecureFsError::PathNotAbsolute(path.to_path_buf()));
     }
@@ -149,10 +149,7 @@ fn open_verified_private_directory(
             Component::RootDir => continue,
             Component::Normal(name) => {
                 let is_final = components.peek().is_none();
-                let flags = OFlags::RDONLY
-                    | OFlags::DIRECTORY
-                    | OFlags::CLOEXEC
-                    | OFlags::NOFOLLOW;
+                let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
 
                 let (next, created) = match openat(&current, name, flags, Mode::empty()) {
                     Ok(directory) => (directory, false),
@@ -164,9 +161,13 @@ fn open_verified_private_directory(
                                 return Err(io_error("create directory", path, create_error));
                             }
                         };
-                        let directory = openat(&current, name, flags, Mode::empty())
-                            .map_err(|open_error| {
-                                io_error("open directory without following symlinks", path, open_error)
+                        let directory =
+                            openat(&current, name, flags, Mode::empty()).map_err(|open_error| {
+                                io_error(
+                                    "open directory without following symlinks",
+                                    path,
+                                    open_error,
+                                )
                             })?;
                         (directory, created)
                     }
@@ -206,8 +207,7 @@ fn open_verified_private_directory(
                     }
                     final_created = created;
                 } else {
-                    let owned_by_trusted_principal =
-                        owner_uid == 0 || owner_uid == expected_uid;
+                    let owned_by_trusted_principal = owner_uid == 0 || owner_uid == expected_uid;
                     let group_or_world_writable = mode & 0o022 != 0;
                     let safe_sticky_parent = owner_uid == 0 && mode & 0o1000 != 0;
 
@@ -272,23 +272,15 @@ pub fn create_private_file(
 
     let (directory_fd, _, _) = open_verified_private_directory(directory)?;
     let file_path = directory.join(file_name);
-    let flags = OFlags::WRONLY
-        | OFlags::CREATE
-        | OFlags::EXCL
-        | OFlags::CLOEXEC
-        | OFlags::NOFOLLOW;
-    let file_fd = match rustix::fs::openat(
-        &directory_fd,
-        file_name,
-        flags,
-        Mode::from_raw_mode(0o600),
-    ) {
-        Ok(file) => file,
-        Err(error) if error == Errno::EXIST => {
-            return Err(SecureFsError::FileAlreadyExists(file_path));
-        }
-        Err(error) => return Err(io_error("create private file", &file_path, error)),
-    };
+    let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+    let file_fd =
+        match rustix::fs::openat(&directory_fd, file_name, flags, Mode::from_raw_mode(0o600)) {
+            Ok(file) => file,
+            Err(error) if error == Errno::EXIST => {
+                return Err(SecureFsError::FileAlreadyExists(file_path));
+            }
+            Err(error) => return Err(io_error("create private file", &file_path, error)),
+        };
 
     let mut file = std::fs::File::from(file_fd);
     let write_result = (|| -> io::Result<()> {
@@ -314,9 +306,8 @@ pub fn create_private_file(
     }
 
     drop(file);
-    fsync(&directory_fd).map_err(|error| {
-        io_error("sync private file's parent directory", &file_path, error)
-    })?;
+    fsync(&directory_fd)
+        .map_err(|error| io_error("sync private file's parent directory", &file_path, error))?;
 
     Ok(file_path)
 }
@@ -368,7 +359,10 @@ mod tests {
 
         let file = create_private_file(&config_dir, "otya-engine.toml", b"schema_version = 1\n")
             .expect("private config file should be created");
-        assert_eq!(fs::read(&file).expect("file should be readable"), b"schema_version = 1\n");
+        assert_eq!(
+            fs::read(&file).expect("file should be readable"),
+            b"schema_version = 1\n"
+        );
         assert_eq!(
             fs::metadata(&file)
                 .expect("file metadata should be available")
@@ -396,7 +390,10 @@ mod tests {
             create_private_file(&config_dir, "otya-engine.toml", b"new content"),
             Err(SecureFsError::FileAlreadyExists(_))
         ));
-        assert_eq!(fs::read(&existing).expect("existing file should remain"), b"operator data");
+        assert_eq!(
+            fs::read(&existing).expect("existing file should remain"),
+            b"operator data"
+        );
 
         let target = root.join("outside-target");
         fs::write(&target, b"target data").expect("target should be created");
@@ -406,7 +403,10 @@ mod tests {
             create_private_file(&config_dir, "linked.toml", b"replacement"),
             Err(SecureFsError::FileAlreadyExists(_))
         ));
-        assert_eq!(fs::read(&target).expect("target should remain"), b"target data");
+        assert_eq!(
+            fs::read(&target).expect("target should remain"),
+            b"target data"
+        );
     }
 
     #[test]
@@ -419,7 +419,14 @@ mod tests {
         let config_dir = root.join("config");
         ensure_private_directory("configuration", &config_dir)
             .expect("config directory should be prepared");
-        for invalid in ["", ".", "..", "../outside.toml", "sub/config.toml", "/tmp/file"] {
+        for invalid in [
+            "",
+            ".",
+            "..",
+            "../outside.toml",
+            "sub/config.toml",
+            "/tmp/file",
+        ] {
             assert!(matches!(
                 create_private_file(&config_dir, invalid, b"content"),
                 Err(SecureFsError::InvalidFileName(_))
