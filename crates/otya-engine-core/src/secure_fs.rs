@@ -1,12 +1,13 @@
 #![cfg(target_os = "linux")]
 
 use std::{
-    io,
+    io::{self, Write},
+    os::fd::OwnedFd,
     path::{Component, Path, PathBuf},
 };
 
 use rustix::{
-    fs::{Mode, OFlags, fchmod, fstat, mkdirat, open, openat},
+    fs::{AtFlags, Mode, OFlags, fchmod, fstat, fsync, mkdirat, open, openat, unlinkat},
     io::Errno,
     process::geteuid,
 };
@@ -52,6 +53,16 @@ pub enum SecureFsError {
         path: PathBuf,
         expected_uid: u64,
         actual_uid: u64,
+    },
+    #[error("configuration file name must be one plain file-name component: {0}")]
+    InvalidFileName(String),
+    #[error("configuration file already exists and was not changed: {0}")]
+    FileAlreadyExists(PathBuf),
+    #[error("writing {path} failed ({write_error}); cleanup of the incomplete file also failed ({cleanup_error})")]
+    FileWriteCleanup {
+        path: PathBuf,
+        write_error: io::Error,
+        cleanup_error: io::Error,
     },
     #[error("filesystem operation {operation} failed for {path}: {source}")]
     Io {
@@ -101,6 +112,21 @@ fn ensure_private_directory(
     purpose: &'static str,
     path: &Path,
 ) -> Result<PreparedDirectory, SecureFsError> {
+    let (_directory, created, permissions_hardened) = open_verified_private_directory(path)?;
+    Ok(PreparedDirectory {
+        purpose,
+        path: path.to_path_buf(),
+        created,
+        permissions_hardened,
+    })
+}
+
+/// Open a directory by walking from the filesystem root with O_NOFOLLOW.
+/// Every intermediate directory must have a trusted owner and safe write mode;
+/// the final Otya directory is owned by this operator and hardened to 0700.
+fn open_verified_private_directory(
+    path: &Path,
+) -> Result<(OwnedFd, bool, bool), SecureFsError> {
     if !path.is_absolute() {
         return Err(SecureFsError::PathNotAbsolute(path.to_path_buf()));
     }
@@ -123,24 +149,26 @@ fn ensure_private_directory(
             Component::RootDir => continue,
             Component::Normal(name) => {
                 let is_final = components.peek().is_none();
-                let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+                let flags = OFlags::RDONLY
+                    | OFlags::DIRECTORY
+                    | OFlags::CLOEXEC
+                    | OFlags::NOFOLLOW;
 
                 let (next, created) = match openat(&current, name, flags, Mode::empty()) {
                     Ok(directory) => (directory, false),
                     Err(error) if error == Errno::NOENT => {
-                        match mkdirat(&current, name, Mode::from_raw_mode(0o700)) {
-                            Ok(()) => {}
-                            Err(create_error) if create_error == Errno::EXIST => {}
+                        let created = match mkdirat(&current, name, Mode::from_raw_mode(0o700)) {
+                            Ok(()) => true,
+                            Err(create_error) if create_error == Errno::EXIST => false,
                             Err(create_error) => {
                                 return Err(io_error("create directory", path, create_error));
                             }
-                        }
-
-                        let directory =
-                            openat(&current, name, flags, Mode::empty()).map_err(|open_error| {
-                                io_error("open newly created directory", path, open_error)
+                        };
+                        let directory = openat(&current, name, flags, Mode::empty())
+                            .map_err(|open_error| {
+                                io_error("open directory without following symlinks", path, open_error)
                             })?;
-                        (directory, true)
+                        (directory, created)
                     }
                     Err(error) => {
                         return Err(io_error(
@@ -156,8 +184,6 @@ fn ensure_private_directory(
                 let mode = metadata.st_mode;
                 let owner_uid = u64::from(metadata.st_uid);
 
-                // DIRECTORY plus O_NOFOLLOW must yield a directory, but keep
-                // an explicit type check so this invariant is visible here.
                 if mode & 0o170000 != 0o040000 {
                     return Err(io_error("validate directory type", path, Errno::NOTDIR));
                 }
@@ -180,7 +206,8 @@ fn ensure_private_directory(
                     }
                     final_created = created;
                 } else {
-                    let owned_by_trusted_principal = owner_uid == 0 || owner_uid == expected_uid;
+                    let owned_by_trusted_principal =
+                        owner_uid == 0 || owner_uid == expected_uid;
                     let group_or_world_writable = mode & 0o022 != 0;
                     let safe_sticky_parent = owner_uid == 0 && mode & 0o1000 != 0;
 
@@ -207,12 +234,89 @@ fn ensure_private_directory(
         return Err(SecureFsError::MissingFinalComponent(path.to_path_buf()));
     }
 
-    Ok(PreparedDirectory {
-        purpose,
-        path: path.to_path_buf(),
-        created: final_created,
-        permissions_hardened: final_hardened,
-    })
+    Ok((current, final_created, final_hardened))
+}
+
+/// Prepare only the configuration directory for an explicit config-init action.
+pub fn prepare_engine_config_directory(
+    paths: &EnginePaths,
+) -> Result<PreparedDirectory, SecureFsError> {
+    if geteuid().is_root() {
+        return Err(SecureFsError::RunningAsRoot);
+    }
+    ensure_private_directory("configuration", &paths.config_dir)
+}
+
+/// Exclusively create a private file inside a verified operator-owned directory.
+///
+/// The parent directory is re-opened without following symlinks. O_EXCL means
+/// an existing file (including a symlink) is never followed or overwritten.
+/// The new file is mode 0600 and its contents are synced before the parent dir.
+pub fn create_private_file(
+    directory: &Path,
+    file_name: &str,
+    contents: &[u8],
+) -> Result<PathBuf, SecureFsError> {
+    if geteuid().is_root() {
+        return Err(SecureFsError::RunningAsRoot);
+    }
+
+    let mut components = Path::new(file_name).components();
+    let is_one_normal_component =
+        matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none();
+    if !is_one_normal_component {
+        return Err(SecureFsError::InvalidFileName(file_name.to_owned()));
+    }
+
+    let (directory_fd, _, _) = open_verified_private_directory(directory)?;
+    let file_path = directory.join(file_name);
+    let flags = OFlags::WRONLY
+        | OFlags::CREATE
+        | OFlags::EXCL
+        | OFlags::CLOEXEC
+        | OFlags::NOFOLLOW;
+    let file_fd = match rustix::fs::openat(
+        &directory_fd,
+        file_name,
+        flags,
+        Mode::from_raw_mode(0o600),
+    ) {
+        Ok(file) => file,
+        Err(error) if error == Errno::EXIST => {
+            return Err(SecureFsError::FileAlreadyExists(file_path));
+        }
+        Err(error) => return Err(io_error("create private file", &file_path, error)),
+    };
+
+    let mut file = std::fs::File::from(file_fd);
+    let write_result = (|| -> io::Result<()> {
+        fchmod(&file, Mode::from_raw_mode(0o600)).map_err(io::Error::from)?;
+        file.write_all(contents)?;
+        file.sync_all()
+    })();
+
+    if let Err(write_error) = write_result {
+        drop(file);
+        return match unlinkat(&directory_fd, file_name, AtFlags::empty()) {
+            Ok(()) => Err(SecureFsError::Io {
+                operation: "write private file",
+                path: file_path,
+                source: write_error,
+            }),
+            Err(cleanup_error) => Err(SecureFsError::FileWriteCleanup {
+                path: file_path,
+                write_error,
+                cleanup_error: cleanup_error.into(),
+            }),
+        };
+    }
+
+    drop(file);
+    fsync(&directory_fd).map_err(|error| {
+        io_error("sync private file's parent directory", &file_path, error)
+    })?;
+
+    Ok(file_path)
 }
 
 fn io_error(operation: &'static str, path: &Path, error: Errno) -> SecureFsError {
