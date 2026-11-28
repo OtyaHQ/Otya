@@ -3,7 +3,9 @@
 **Status:** first integration pilots prepared; production adoption is not complete.  
 **Reviewed:** 2026-11-28.
 
-Otya Engine should power shared runtime capabilities underneath Otya applications and websites. It must not absorb product ownership, user interfaces, data authority, authentication or legal/business rules. First-party products must consume the same public SDK and host contracts as an unrelated independent operator; the [Independent Operator Guide](INDEPENDENT_OPERATOR_GUIDE.md) documents that model and the audited resource-retirement decisions.
+Otya Engine should power shared runtime capabilities underneath Otya applications and websites. It must not absorb product ownership, product-specific authorization, data authority or legal/business rules. It may provide an installation-owned identity issuer, shared authentication foundation, operator console and reusable UI kit. First-party products must consume the same public SDK and host contracts as an unrelated independent operator; the [Independent Operator Guide](INDEPENDENT_OPERATOR_GUIDE.md) documents that model and the audited resource-retirement decisions.
+
+The same installation should provide the company's private login portal and staff identity realm, visual operator console, reusable UI components and approved shared modules. OID remains the existing identity service during a carefully tested migration; Engine identity is a target capability, not a production replacement today.
 
 The company should use **one operator-controlled Engine installation and one Otya workspace** to manage all product projects and deployment components. This centralizes inventory, configuration, approved shared services, secrets grants, deployment planning, monitoring, backup coordination and audit. It does not merge product repositories, combine databases, grant every app access to every service or make Engine a mandatory runtime dependency for each request. The [Multi-project operator architecture](MULTI_PROJECT_OPERATOR_ARCHITECTURE.md) defines the workspace, project, component, environment and sharing model.
 
@@ -96,11 +98,11 @@ OHub does not need to run an Engine instance merely because it documents Otya. F
 - **OCI container/VPS:** later Linux deployment profile where a full process environment is needed.
 - **Other hosts:** add adapters only after host contract conformance tests exist.
 
-Phone access is the operator workflow: GitHub review, CI and manual deployment can be used from a browser. The engine itself remains headless and runs on a host independently of the operator's phone.
+Phone access is the operator workflow: GitHub review, CI and manual deployment can be used from a browser. The Rust core and runtime services remain host-based; the installation's browser console is a management UI accessed from the operator's phone or computer.
 
 ## Non-negotiable safety and ownership rules
 
-1. One Otya Engine installation belongs to one operator boundary. Do not introduce a central Otya customer directory, mandatory Engine account, vendor telemetry or hidden control plane.
+1. One Otya Engine installation belongs to one operator boundary and may own its own identity realm. Do not introduce a global Otya customer directory, cross-installation user sharing, mandatory Engine account, vendor telemetry or hidden remote control plane.
 2. Each product owns its user/business authorization and authoritative data. An Engine module must not bypass OID, OPoint company/branch scope or O's owner approval gate.
 3. Financial records stay in OPoint's authoritative store. Do not move the ledger to a shared Engine database, cache or queue.
 4. Omy playback and local media remain usable without cloud connectivity.
@@ -110,7 +112,7 @@ Phone access is the operator workflow: GitHub review, CI and manual deployment c
 
 ## Current Engine limitations before product traffic
 
-The current SDK has a synchronous exact-route registry and static application manifests. Its Cloudflare adapter currently passes anonymous requests to a read-only catalogue example; it does not authenticate product users or forward request bodies. The portable Storage contract is synchronous and the SQLite adapter is not yet a complete business schema/backup solution.
+The current SDK has a synchronous exact-route registry and static application manifests. The complete operator console, built-in identity provider, policy engine and reusable UI kit described in the target platform architecture are not implemented yet. Its Cloudflare adapter currently passes anonymous requests to a read-only catalogue example; it does not authenticate product users or forward request bodies. The portable Storage contract is synchronous and the SQLite adapter is not yet a complete business schema/backup solution.
 
 Before OEnd handles real application traffic, implement and test:
 - an asynchronous host/storage contract suitable for D1 and other async adapters;
