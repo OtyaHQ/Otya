@@ -1,6 +1,6 @@
 # Bring-your-own-infrastructure provider architecture
 
-**Status:** target architecture and security specification. The Rust core now has initial metadata contracts for provider connections, credential references, resource bindings and project grants; CI validation is pending. The registry, vault and provider adapters are not yet shipped.  
+**Status:** target architecture and security specification. The Rust core now has initial metadata contracts for provider connections, credential references, resource bindings and project grants. Formatting, Clippy, workspace tests, release build and the Rust 1.85 minimum-version check passed in Otya Engine CI run 46159074134. The portable Android and WebAssembly core targets also passed; the separate Cloudflare Worker packaging check remains in progress. The registry, vault and provider adapters are not yet shipped.  
 **Reviewed:** 2026-11-28.
 
 ## 1. Product rule
@@ -244,7 +244,7 @@ Brand Otya as the independent engine/control plane, not as a cloud reseller or a
 
 ## 11. Current implementation status
 
-The existing Engine now has initial Rust metadata types for ProviderConnection, CredentialReference, ProviderResourceBinding and ProviderProjectGrant, including basic validation for identifiers, duplicate scopes, missing credential references, resource/project/environment matching and capability grants. These types hold secret references, not raw secret values. CI validation for this new code is pending.
+The existing Engine now has initial Rust metadata types for ProviderConnection, CredentialReference, ProviderResourceBinding and ProviderProjectGrant, including basic validation for identifiers, duplicate scopes, missing credential references, resource/project/environment matching and capability grants. These types hold secret references, not raw secret values. Formatting, Clippy, workspace tests, release build and Rust 1.85 checks passed on the provider-contract revision (Otya Engine CI run 46159074134). Android and WebAssembly portable-core compilation also passed; the separate Cloudflare Worker packaging job remains in progress.
 
 The Engine still has no persistent provider connection registry, credential vault or resolver, guided integration console, OAuth flow, generic webhook receiver, live provider API adapter or production provider deployment manager. The current Cloudflare Worker adapter remains a preview/demo. The provider patterns in this document are target design, not shipped integrations.
 
