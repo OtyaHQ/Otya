@@ -30,7 +30,7 @@ Otya is the foundation developers build on, not one monolithic application. The 
 
 ## Build as an independent operator
 
-A developer keeps an application in their own repository and installs Otya only as a dependency/runtime. Every operator controls their own installation, data, provider accounts and infrastructure. The current SDK is experimental and unpublished; the external service API and application scaffolder are not shipped yet. See [Building Independent Applications on Otya](docs/INDEPENDENT_OPERATOR_GUIDE.md) for what works today, the planned integration forms, and the audited repository/Worker retirement decisions.
+A developer keeps an application in their own repository and uses Otya through a local installation, released SDK or versioned HTTPS/JSON contract. Rust is the core implementation language, not a restriction on application authors: any language with a supported SDK or HTTP client can build on top. Every operator controls their own installation, data, provider accounts and infrastructure. The current SDK is experimental and unpublished; the external service API and application scaffolder are not shipped yet. See [Building Independent Applications on Otya](docs/INDEPENDENT_OPERATOR_GUIDE.md) for what works today, the planned integration forms, and the audited repository/Worker retirement decisions.
 
 ## The Media Kit design lesson
 
@@ -84,8 +84,7 @@ Generic HTTP, signed webhooks, SMTP and S3-compatible storage are additional ada
 ## What Otya is not
 
 - Not a hosted SaaS backend.
-- Not a cloud provider or serverless platform.
-- Not a database service.
+- Not a cloud provider, hosted database or storage vendor. Otya can run local services and manage resources in accounts the operator owns.
 - Not a replacement for Linux or the operator's operating system.
 - Not a shared, Otya-hosted identity provider; each installation may run its own private identity service.
 - Not a programming language, compiler or language runtime.
@@ -114,6 +113,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 ## Start here
 
 - [Engine architecture](docs/ARCHITECTURE.md)
+- [Otya brand and product identity](docs/BRAND_AND_PRODUCT_IDENTITY.md)
+- [Bring-your-own-infrastructure provider connections](docs/BYI_PROVIDER_CONNECTIONS.md)
 - [Otya brand and product identity](docs/BRAND_AND_PRODUCT_IDENTITY.md)
 - [Bring-your-own-infrastructure provider connections](docs/BYI_PROVIDER_CONNECTIONS.md)
 - [Private platform distribution: identity, UI and integrated services](docs/PRIVATE_PLATFORM_DISTRIBUTION.md)
