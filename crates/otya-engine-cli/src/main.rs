@@ -7,10 +7,10 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{
-    DEFAULT_CONFIG_FILE_NAME, DiagnosticSeverity, discover_engine_paths_for, parse_config,
-    starter_config_toml,
-};
+use otya_engine_core::{DiagnosticSeverity, discover_engine_paths_for, parse_config};
+
+#[cfg(target_os = "linux")]
+use otya_engine_core::{DEFAULT_CONFIG_FILE_NAME, starter_config_toml};
 
 #[derive(Debug, Parser)]
 #[command(
