@@ -14,8 +14,8 @@ mod paths;
 mod secure_fs;
 
 pub use config::{
-    ConfigDiagnostic, ConfigError, DiagnosticSeverity, EngineConfig, EngineRuntimeConfig,
-    ExecutionMode, StorageConfig, ValidationReport, DEFAULT_CONFIG_FILE_NAME, parse_config,
+    ConfigDiagnostic, ConfigError, DEFAULT_CONFIG_FILE_NAME, DiagnosticSeverity, EngineConfig,
+    EngineRuntimeConfig, ExecutionMode, StorageConfig, ValidationReport, parse_config,
     starter_config_toml,
 };
 pub use paths::{
