@@ -182,9 +182,7 @@ fn show_paths(json: bool, create: bool, instance: Option<&str>) -> Result<(), St
         }
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(
-                "directory preparation is currently implemented only for Linux".to_owned(),
-            );
+            return Err("directory preparation is currently implemented only for Linux".to_owned());
         }
     } else {
         Vec::new()
