@@ -257,8 +257,7 @@ mod tests {
 
         let root = temporary_root("nested");
         let target = root.join("operator").join("otya-engine");
-        let first =
-            ensure_private_directory("data", &target).expect("directory should be created");
+        let first = ensure_private_directory("data", &target).expect("directory should be created");
         assert!(first.created);
         assert_eq!(
             fs::metadata(&target)
@@ -269,8 +268,8 @@ mod tests {
             0o700
         );
 
-        let second = ensure_private_directory("data", &target)
-            .expect("existing directory should validate");
+        let second =
+            ensure_private_directory("data", &target).expect("existing directory should validate");
         assert!(!second.created);
         assert!(!second.permissions_hardened);
 
