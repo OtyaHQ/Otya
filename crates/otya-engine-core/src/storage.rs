@@ -40,15 +40,10 @@ pub enum StorageError {
 /// or protect access using its own synchronization strategy. Implementations
 /// must commit atomically and roll back when a transaction is dropped.
 pub trait Storage: Send + Sync {
-    /// Concrete transaction type borrowed from this store.
-    type Transaction<'store>: StorageTransaction
-    where
-        Self: 'store;
+    /// Begin a write-capable transaction. The transaction remains tied to this store.
+    fn begin(&self) -> Result<Box<dyn StorageTransaction + '_>, StorageError>;
 
-    /// Begin a write-capable transaction.
-    fn begin(&self) -> Result<Self::Transaction<'_>, StorageError>;
-
-    /// Perform a bounded local health check without making network requests.
+    /// Perform a local health check without making network requests.
     fn health_check(&self) -> Result<(), StorageError>;
 }
 
@@ -77,5 +72,5 @@ pub trait StorageTransaction {
     ) -> Result<Vec<StorageEntry>, StorageError>;
 
     /// Atomically commit all changes in this transaction.
-    fn commit(self) -> Result<(), StorageError>;
+    fn commit(self: Box<Self>) -> Result<(), StorageError>;
 }
