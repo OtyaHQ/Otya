@@ -34,7 +34,9 @@ pub enum PathResolutionError {
     HomeUnavailable,
     #[error("path discovery is currently implemented only for Linux")]
     UnsupportedPlatform,
-    #[error("invalid local instance name {0:?}; use 1-48 lowercase letters, digits, underscores or hyphens, starting with a letter or digit")]
+    #[error(
+        "invalid local instance name {0:?}; use 1-48 lowercase letters, digits, underscores or hyphens, starting with a letter or digit"
+    )]
     InvalidInstanceName(String),
 }
 
@@ -296,7 +298,15 @@ mod tests {
 
     #[test]
     fn rejects_instance_names_that_could_escape_or_collide() {
-        for invalid in ["", "../outside", "Uppercase", "two words", "a/b", "a.b", "-start"] {
+        for invalid in [
+            "",
+            "../outside",
+            "Uppercase",
+            "two words",
+            "a/b",
+            "a.b",
+            "-start",
+        ] {
             assert!(matches!(
                 validate_instance_name(invalid),
                 Err(PathResolutionError::InvalidInstanceName(_))
