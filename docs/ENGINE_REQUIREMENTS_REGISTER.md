@@ -1,23 +1,27 @@
 # Otya Engine Requirements Register
 
-This is the authoritative gap and acceptance checklist. An item is not complete merely because it is described.
+This is the authoritative gap and acceptance checklist. An item is not complete merely because it is described. See [Engine Gap Audit](ENGINE_GAP_AUDIT.md) for current implementation status and recommended order.
 
 ## Product boundary and operator model
 
-- [ ] One installation belongs to one installing operator / OS user.
+- [ ] One installation belongs to one installing operator; an operator may be an individual or organization.
 - [ ] No company registration, tenant provisioning, shared user directory or vendor installation registration in core.
 - [ ] No mandatory Otya account, hosted control plane, database, compute or telemetry.
 - [ ] Host application owns its users, business identities and permissions.
-- [ ] Multiple operators use separate OS-user installations; no implicit sharing.
-- [ ] One operator can explicitly maintain separate isolated installations with distinct paths and processes.
+- [ ] Separate operators use separate isolated installations; no implicit sharing.
+- [ ] One operator can explicitly maintain multiple isolated installations with distinct paths and processes.
+- [ ] No central heartbeat, usage metering or remote enable/disable path.
 
 ## Installation and Linux lifecycle
 
-- [ ] Rust workspace, pinned toolchain and declared MSRV.
-- [ ] Embeddable library is the primary artifact.
-- [ ] Optional per-user service with local IPC only.
-- [ ] CLI for version, doctor, config, status, logs, self-test and lifecycle.
-- [ ] XDG-compliant config, data, state, cache and runtime paths.
+- [x] Rust workspace with core and CLI crates, pinned stable channel and declared MSRV.
+- [x] Strict versioned TOML configuration and local CLI version/doctor/config validation.
+- [ ] Embedded library is the primary artifact with stable public API.
+- [ ] XDG path resolution for per-operator config, data, state, cache and runtime directories (implementation added; current-head CI pending).
+- [ ] CLI doctor validates actual filesystem ownership, permissions, symlink risk, disk space and host prerequisites.
+- [ ] Secure directory creation, atomic configuration writes and safe installation roots.
+- [ ] Optional per-user service with owner-only local IPC.
+- [ ] CLI for install, status, logs, service lifecycle and self-test.
 - [ ] Installer preflight for OS, architecture, storage, memory and permissions.
 - [ ] Signed artifacts, checksums, SBOM and build provenance.
 - [ ] Idempotent install, interrupted-install recovery, upgrade, rollback and uninstall.
@@ -28,18 +32,19 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 
 - [ ] Typed configuration schema and migrations.
 - [ ] Stable Rust API and semantic versioning.
-- [ ] Typed errors, request IDs and correlation context.
+- [ ] Typed errors, request IDs and local correlation context.
 - [ ] Lifecycle hooks and graceful shutdown.
 - [ ] Module registry, compatibility checks and capability grants.
-- [ ] Storage, secret, transport and clock abstractions.
+- [ ] Storage, secret, transport, clock and platform abstractions.
 - [ ] Adapter conformance and API compatibility tests.
 - [ ] No company_id, tenant_id or end-user directory in core schema.
+- [ ] No mandatory network call during startup or local operation.
 
 ## Storage and data
 
 - [ ] No mandatory Otya-hosted or central database.
 - [ ] Optional SQLite adapter for local durable single-operator data.
-- [ ] Optional customer-managed PostgreSQL where shared app connectivity is needed.
+- [ ] Optional operator-managed PostgreSQL where concurrent app connectivity is needed.
 - [ ] In-memory mode restricted to tests or explicitly ephemeral workloads.
 - [ ] Transaction and idempotency semantics tested under concurrency.
 - [ ] Transactional outbox and webhook inbox.
@@ -48,9 +53,10 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] Data export, import, retention and deletion.
 - [ ] Filesystem and optional object-storage adapters.
 
-## Reliability
+## Runtime and reliability
 
 - [ ] Durable job leases, bounded retries and backoff with jitter.
+- [ ] Scheduler with persisted occurrence IDs and restart recovery.
 - [ ] Circuit breakers and provider rate-limit handling.
 - [ ] Unknown-outcome state and reconciliation before unsafe retries.
 - [ ] Dead-letter inspection, replay authorization and audit.
@@ -75,7 +81,7 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 
 ## Integrations
 
-- [ ] Generic REST/HTTP adapter.
+- [ ] Generic REST/HTTP adapter with bounded timeouts and body limits.
 - [ ] Signed webhook ingress/egress.
 - [ ] SMTP adapter.
 - [ ] Resend optional email adapter.
@@ -86,18 +92,26 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 - [ ] Provider sandbox fixtures and contract tests.
 - [ ] Per-adapter scopes, permissions, data-flow and error matrix.
 
-## Developer and operator experience
+## Developer experience and portability
 
 - [ ] Rust SDK documentation and examples.
+- [ ] Versioned C ABI with ownership, threading and error contracts.
 - [ ] Flutter/Dart FFI wrapper with memory/lifecycle tests.
-- [ ] Python bindings with packaging tests.
+- [ ] Python bindings as an optional separately installable package; no embedded Python requirement.
 - [ ] Local diagnostics and safe support bundle.
+- [ ] OS-neutral core APIs and isolated platform-specific implementations.
+- [ ] Verified Linux distribution/libc/architecture matrix.
+- [ ] Windows/macOS ports only after platform lifecycle and packaging tests.
 - [ ] Upgrade compatibility matrix and deprecation policy.
 - [ ] Operator guide, emergency runbooks and recovery guides.
 - [ ] Offline operation documented and tested for local features.
 
-## Governance and release
+## Observability, performance and governance
 
+- [ ] Structured local logs, rotation and secret/personal-data redaction.
+- [ ] Health, readiness, metrics and trace correlation with no mandatory hosted telemetry.
+- [ ] Benchmarks for startup, idle memory, binary size, throughput and latency.
+- [ ] Performance budgets based on named reference hardware.
 - [ ] Approved software license and trademark policy.
 - [ ] Contributor terms and code ownership.
 - [ ] Release signing-key custody and rotation.
