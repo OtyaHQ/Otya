@@ -44,6 +44,18 @@ jobs:
           cargo run -p otya-engine-cli -- doctor --json
           cargo run -p otya-engine-cli -- paths --json
           cargo run -p otya-engine-cli -- paths --instance ci-isolated --create --json
+          cargo run -p otya-engine-cli -- config init --instance ci-config-init --json
+          CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/otya-engine/instances/ci-config-init/otya-engine.toml"
+          test -f "$CONFIG_FILE"
+          test "$(stat -c '%a' "$CONFIG_FILE")" = "600"
+          cargo run -p otya-engine-cli -- config validate --file "$CONFIG_FILE"
+          BEFORE_HASH="$(sha256sum "$CONFIG_FILE" | cut -d ' ' -f 1)"
+          if cargo run -p otya-engine-cli -- config init --instance ci-config-init; then
+            echo "config init unexpectedly overwrote an existing file" >&2
+            exit 1
+          fi
+          AFTER_HASH="$(sha256sum "$CONFIG_FILE" | cut -d ' ' -f 1)"
+          test "$BEFORE_HASH" = "$AFTER_HASH"
 
       - name: Validate example configuration
         run: cargo run -p otya-engine-cli -- config validate --file examples/otya-engine.toml
