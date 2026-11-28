@@ -5,7 +5,7 @@
 
 ## The correct mental model
 
-Otya Engine is software that an application developer or operator installs and uses as a reusable foundation. It is not a hosted Otya account, shared customer platform, business application or website builder.
+Otya Engine is a privately installed application platform and reusable foundation. The full distribution is intended to include a local management console, installation-owned identity and access services, shared capability modules and a UI toolkit for developers and non-developers. It is not a hosted Otya account or a cross-customer shared platform. It is not a ready-made vertical business product: each application still owns its product workflows and business rules. See [Private platform distribution](PRIVATE_PLATFORM_DISTRIBUTION.md).
 
 A person or organization runs its own installation in its own environment. It controls the host, app source, configuration, storage, credentials, network, provider accounts, backups and release process. Another organization runs a separate installation. The installations do not share an Otya customer database and do not register themselves with Otya.
 
