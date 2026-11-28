@@ -111,6 +111,12 @@ A contributor can use a phone browser for the full development workflow. The rep
 
 The Android application is a separate future distribution: a native Kotlin or Flutter host will embed the portable Rust core through a reviewed FFI package. The current portability workflow is a core compile check only; it does not generate an APK or make the CLI/Linux SQLite adapter available on Android. See [Mobile Runtime Model](MOBILE_RUNTIME_MODEL.md).
 
+## Headless cloud and server packaging
+
+The engine is not shipped as an APK, desktop GUI or Otya mobile app. The portable Rust core may be embedded by a host application or compiled for supported runtimes. The first Cloudflare Worker wrapper is separate from the native CLI and SQLite adapter. Full Linux workloads should use a separately tested Linux service or OCI container. Worker, container and local service modes do not share identical filesystem or process capabilities.
+
+The Cloudflare Rust Worker is built and optionally deployed through the repository's manual GitHub Actions workflow. It requires operator-owned Cloudflare credentials stored in GitHub Actions secrets; it does not require a developer PC. Production deployment is restricted to main. See the Worker adapter guide and the phone-first development guide.
+
 ## Linux-first packaging
 
 The first installation profile is per-user. Respect XDG configuration, data, state, cache and runtime directories. See [Linux Platform Model](LINUX_PLATFORM_MODEL.md). Do not create a global service or root-owned shared database. A second OS user gets a separate installation. One OS user may create separate named local instances using `--instance NAME`; each has a distinct config, data, state, cache and runtime directory namespace. The local service socket is private to the installing UID; it does not isolate mutually untrusted processes sharing the same UID.
