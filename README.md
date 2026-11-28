@@ -43,11 +43,11 @@ All modes share the same engine core and versioned contracts.
 Otya does not provide mandatory hosted compute, cloud storage or a central database.
 
 - The host application may provide storage through a versioned storage interface.
-- An initial Linux-only SQLite adapter exists as a separate optional crate; the core and CLI do not depend on it. Customer-managed PostgreSQL remains planned.
+- The portable core defines a backend-neutral storage contract; a separate optional Linux-only SQLite adapter implements it. The Linux CLI includes optional SQLite storage commands; customer-managed PostgreSQL remains planned.
 - Files can remain on the local filesystem or use an operator-selected object-storage adapter.
 - Credentials are resolved through the operator's operating-system secret store, environment/credential injection or an explicitly configured vault.
 
-The SQLite crate is an initial, CI-tested foundation: it opens private operator-owned files, checks Otya database identity/schema metadata, enables WAL, exposes explicit rollback-safe transactions and runs SQLite integrity checks. It is not yet a generic storage abstraction or a complete persistence system: business schemas, the general migration framework, online backup/restore, recovery and stress/fault-injection testing remain incomplete. The starter config still uses memory storage and warns that it is volatile. This branch is experimental; do not put production data into it. See [SQLite adapter status and requirements](docs/STORAGE_SQLITE.md).
+The SQLite adapter implements namespaced key/value storage, explicit rollback-safe transactions, bounded prefix scans, WAL, private database files and an initial schema v1-to-v2 migration. The newer generic storage integration still needs its own green CI run. Business-module schemas, a general migration runner, online backup/restore, crash recovery and stress/fault-injection testing remain incomplete. The starter config still uses memory storage and warns that it is volatile. This branch is experimental; do not put production data into it. See [SQLite adapter status and requirements](docs/STORAGE_SQLITE.md).
 
 ## Provider integrations
 
@@ -78,6 +78,10 @@ This repository is the source of truth for Otya Engine. The current repository i
 
 Every feature must be labeled accurately as proposed, implemented, CI-tested, manually verified or released. See [Engine roadmap](docs/ROADMAP.md), [requirements register](docs/ENGINE_REQUIREMENTS_REGISTER.md), [comprehensive gap audit](docs/ENGINE_GAP_AUDIT.md), and [implementation gates](docs/ENGINE_RELIABILITY_MODEL.md).
 
+## Phone-first development and mobile use
+
+Otya development is designed so a contributor can use a phone browser with a remote Codespaces environment and GitHub Actions doing the heavy compilation and testing. A separate Android-first application architecture is planned so end users can use Otya-powered apps on phones without installing a PC toolchain. The current branch has a Codespaces devcontainer and Android/WebAssembly core compile workflow; these do not yet produce a mobile app or APK. See [Phone-First Development](docs/PHONE_FIRST_DEVELOPMENT.md) and [Mobile Runtime Model](docs/MOBILE_RUNTIME_MODEL.md).
+
 ## Engineering influences
 
 Otya studies mature systems and adopts proven engineering practices without copying their identities or rebuilding their entire products. See [Engineering influences and design rules](docs/ENGINEERING_INFLUENCES.md).
@@ -94,6 +98,8 @@ Repository visibility does not by itself grant permission to reuse, redistribute
 - [Installable kit and packaging model](docs/INSTALLATION_KIT.md)
 - [Configuration lifecycle and safe initialization](docs/CONFIGURATION_LIFECYCLE.md)
 - [Optional SQLite storage adapter](docs/STORAGE_SQLITE.md)
+- [Phone-first development](docs/PHONE_FIRST_DEVELOPMENT.md)
+- [Mobile runtime model](docs/MOBILE_RUNTIME_MODEL.md)
 - [Operator and ownership model](docs/OPERATOR_MODEL.md)
 - [One installation, one operator](docs/ONE_INSTALL_ONE_OPERATOR.md)
 - [Linux platform model](docs/LINUX_PLATFORM_MODEL.md)
