@@ -45,6 +45,8 @@ This is the authoritative gap and acceptance checklist. An item is not complete 
 
 ## Storage and data
 
+An initial Linux SQLite foundation exists in `otya-engine-storage-sqlite` (private file opening, schema identity metadata, WAL, transactions and integrity checks). It is not yet accepted as completing the adapter requirement: the generic storage contract, module schemas, general migration lifecycle, online backup/restore and recovery testing remain open.
+
 - [ ] No mandatory Otya-hosted or central database.
 - [ ] Optional SQLite adapter for local durable single-operator data.
 - [ ] Optional operator-managed PostgreSQL where concurrent app connectivity is needed.
