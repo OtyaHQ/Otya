@@ -809,8 +809,7 @@ mod tests {
         }
         let data_dir = temporary_root("drop-rollback");
         create_data_dir(&data_dir);
-        let store = SqliteStore::open(data_dir.join("engine.db"))
-            .expect("database should initialize");
+        let store = SqliteStore::open(data_dir.join("engine.db")).expect("database should initialize");
 
         {
             let mut transaction = store.begin().expect("transaction should begin");
