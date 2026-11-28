@@ -30,6 +30,27 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         };
     }
 
+    if path == "/capabilities" {
+        if req.method() != Method::Get {
+            return Response::error("Method Not Allowed", 405);
+        }
+
+        // This public metadata is deliberately descriptive, not an authority
+        // grant. It tells trusted host adapters which contracts are implemented
+        // by this build and makes limitations explicit.
+        let body = format!(
+            r#"{{"engine":"otya-engine","version":"{}","application_api_version":{},"host":"cloudflare-workers-wasm","capabilities":["http.health","http.version","http.capabilities","application.registry","static.assets"],"limitations":["host-authentication-not-configured","synchronous-dispatch-only","persistent-storage-not-configured","background-jobs-not-configured","request-body-forwarding-not-configured"]}}"#,
+            env!("CARGO_PKG_VERSION"),
+            otya_engine_sdk::APPLICATION_API_VERSION
+        );
+        let headers = Headers::new();
+        headers.set("content-type", "application/json; charset=utf-8")?;
+        headers.set("cache-control", "no-store")?;
+        headers.set("x-content-type-options", "nosniff")?;
+        return Response::from_bytes(body.into_bytes())
+            .map(|response| response.with_headers(headers));
+    }
+
     if path.starts_with("/api/") {
         let mut registry = ApplicationRegistry::new();
         registry.register(CatalogApplication).map_err(|_| {
@@ -55,7 +76,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             .map(|body| body.with_status(response.status()).with_headers(headers));
     }
 
-    // Everything outside health/version/API is served by the optional static
-    // asset binding configured in wrangler.toml.
+    // Everything outside health/version/capabilities/API is served by the
+    // optional static asset binding configured in wrangler.toml.
     env.assets("ASSETS")?.fetch_request(req).await
 }
