@@ -1,0 +1,19 @@
+name = "otya-engine-edge-preview"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-11-28"
+# Only the read-only sample and preview canary use a workers.dev hostname.
+workers_dev = true
+
+[build]
+command = "worker-build --release"
+
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/health", "/version"]
