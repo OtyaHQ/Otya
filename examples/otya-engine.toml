@@ -1,7 +1,6 @@
 schema_version = 1
 
-[instance]
-id = "customer-local"
+[engine]
 mode = "embedded"
 
 [storage]
