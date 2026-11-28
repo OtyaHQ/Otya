@@ -93,7 +93,7 @@ The engine must not attempt to implement its own kernel-level security or claim 
 - Do not follow arbitrary symlinks when creating sockets, config files or backup destinations.
 - Keep database, logs, caches and runtime sockets in their separate XDG locations.
 - Do not store credentials in TOML; use OS keyrings or explicitly configured secret stores.
-- SQLite is an optional single-node durable adapter, not a distributed database.
+- SQLite is an optional single-node durable adapter, not a distributed database. The initial Linux implementation is a separate `otya-engine-storage-sqlite` crate that links to the operator's system SQLite library (the core and CLI do not depend on it); it currently provides metadata initialization, WAL, transaction and integrity-check foundations only. Linux builds need the distribution's SQLite development package and `pkg-config`. See [SQLite Adapter](STORAGE_SQLITE.md).
 
 For live SQLite backups, use the SQLite Online Backup API or a documented consistent backup procedure. A casual copy of a database file while it is active can be unsafe, especially under WAL mode or a crash. Every backup must be verified and periodically restored in an isolated directory.
 
