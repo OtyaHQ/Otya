@@ -15,7 +15,7 @@ The same versioned core is packaged in several forms:
 3. **Operator CLI:** install, configure, diagnose, migrate, back up, restore and upgrade.
 4. **Optional local service:** a supervised process for durable background work and local IPC.
 5. **Platform wrappers:** Flutter/Dart and Python packages built only after the underlying FFI API is stable.
-6. **Optional adapters:** provider or storage packages installed only when the operator needs them.
+6. **Optional adapters:** provider or storage packages installed only when the operator needs them. The experimental Linux SQLite adapter is a separate crate and is not linked into the core or CLI by default.
 
 The embedded library does not require installation of the optional service. The optional service runs under the installing OS user. It is not shared with unrelated OS users and does not require an Otya cloud account.
 
@@ -101,6 +101,8 @@ Planned commands, not yet implemented:
 - uninstall with explicit data-preservation choice
 
 Destructive commands require a preview, explicit confirmation and a verified backup where data is involved.
+
+The initial optional SQLite adapter is documented in [STORAGE_SQLITE.md](STORAGE_SQLITE.md). Building it on Linux requires the host's SQLite development library and `pkg-config` (for example, `libsqlite3-dev` and `pkg-config` on Debian/Ubuntu). It is linked against the system SQLite library rather than bundling a separate copy. This adapter is a preliminary storage foundation only; it does not yet provide the generic storage contract, complete migrations, online backup/restore or crash recovery.
 
 ## Linux-first packaging
 
