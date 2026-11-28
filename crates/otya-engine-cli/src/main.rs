@@ -7,7 +7,9 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use otya_engine_core::{DiagnosticSeverity, StorageConfig, discover_engine_paths_for, parse_config};
+use otya_engine_core::{
+    DiagnosticSeverity, StorageConfig, discover_engine_paths_for, parse_config,
+};
 
 #[cfg(target_os = "linux")]
 use otya_engine_core::{DEFAULT_CONFIG_FILE_NAME, starter_config_toml};
@@ -366,14 +368,15 @@ fn init_config(instance: Option<&str>, json: bool) -> Result<(), String> {
     }
 }
 
-
 fn storage_action(file: &Path, initialize: bool, json: bool) -> Result<(), String> {
     let source = fs::read_to_string(file)
         .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
-    let config = parse_config(&source)
-        .map_err(|error| format!("{}: {error}", file.display()))?;
+    let config = parse_config(&source).map_err(|error| format!("{}: {error}", file.display()))?;
     if !config.validate().is_valid() {
-        return Err(format!("{}: configuration validation failed", file.display()));
+        return Err(format!(
+            "{}: configuration validation failed",
+            file.display()
+        ));
     }
 
     match &config.storage {
@@ -398,7 +401,10 @@ fn storage_action(file: &Path, initialize: bool, json: bool) -> Result<(), Strin
             }
             Ok(())
         }
-        StorageConfig::Sqlite { path, busy_timeout_ms } => {
+        StorageConfig::Sqlite {
+            path,
+            busy_timeout_ms,
+        } => {
             #[cfg(target_os = "linux")]
             {
                 let options = SqliteOptions {
